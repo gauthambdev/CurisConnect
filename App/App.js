@@ -11,7 +11,8 @@ import {
   DoctorDashboard,
   PatientDashboard,
   NurseDashboard,
-  AdminDashboard
+  AdminDashboard,
+  UploadDocScreen
 } from './src/screens'
 
 const Stack = createStackNavigator()
@@ -33,7 +34,9 @@ export default function App() {
           <Stack.Screen name="PatientDashboard" component={PatientDashboard} />
           <Stack.Screen name="NurseDashboard" component={NurseDashboard} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-          <Stack.Screen
+          <Stack.Screen name="UploadDocScreen" component={UploadDocScreen} />
+
+          <Stack.Screen 
             name="ResetPasswordScreen"
             component={ResetPasswordScreen}
           />
