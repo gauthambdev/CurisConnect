@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, Image, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { MaterialIcons } from '@expo/vector-icons';
 import jsPDF from 'jspdf';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 
-const UploadDocScreen = () => {
+import Background from '../components/Background'
+import Logo from '../components/Logo'
+import Header from '../components/Header'
+import Button from '../components/Button'
+import Paragraph from '../components/Paragraph'
+
+export default function UploadDocScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Store upload information in Firebase
   const storeInFirebase = async (cloudinaryUrl) => {
     try {
       const currentUser = auth.currentUser;
@@ -20,7 +26,7 @@ const UploadDocScreen = () => {
 
       const uploadData = {
         uploadedBy: currentUser.uid,
-        uploadedTo: currentUser.uid, // Set to current user
+        uploadedTo: currentUser.uid,
         filename: fileName,
         timestamp: serverTimestamp(),
         url: cloudinaryUrl,
@@ -35,7 +41,6 @@ const UploadDocScreen = () => {
     }
   };
 
-  // Upload to Cloudinary
   const uploadToCloudinary = async (pdfUri) => {
     try {
       const cloudName = 'dle1vya8b';
@@ -65,7 +70,6 @@ const UploadDocScreen = () => {
     }
   };
 
-  // Create PDF from images
   const createPDF = async () => {
     try {
       const pdf = new jsPDF();
@@ -105,7 +109,6 @@ const UploadDocScreen = () => {
     }
   };
 
-  // Handle the complete upload process
   const handleUpload = async () => {
     if (images.length === 0) {
       alert('Please take at least one picture');
@@ -134,7 +137,6 @@ const UploadDocScreen = () => {
     }
   };
 
-  // Take picture using camera
   const takePicture = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -162,20 +164,13 @@ const UploadDocScreen = () => {
     }
   };
 
-  // Process image
   const processImage = async (uri) => {
     try {
       const processedImage = await manipulateAsync(
         uri,
-        [
-          { resize: { width: 1200 } },
-        ],
-        {
-          compress: 0.8,
-          format: SaveFormat.JPEG
-        }
+        [{ resize: { width: 1200 } }],
+        { compress: 0.8, format: SaveFormat.JPEG }
       );
-
       return processedImage.uri;
     } catch (error) {
       console.error('Error processing image:', error);
@@ -183,93 +178,87 @@ const UploadDocScreen = () => {
     }
   };
 
+  const removeImage = (index) => {
+    const newImages = [...images];
+    newImages.splice(index, 1);
+    setImages(newImages);
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={takePicture}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Take Picture</Text>
-        </TouchableOpacity>
+    <Background>
+      <Logo />
+      <Header>Upload Medical Document</Header>
+      <Paragraph>
+        Take pictures of your medical documents to create a PDF
+      </Paragraph>
 
-        {images.length > 0 && (
-          <View style={styles.imagePreviewContainer}>
-            {images.map((uri, index) => (
-              <Image
-                key={index}
-                source={{ uri }}
-                style={styles.imagePreview}
-              />
-            ))}
-          </View>
-        )}
-
+      <ScrollView style={{ width: '100%' }}>
         <TextInput
-          style={styles.input}
-          placeholder="Enter file name"
+          style={{
+            width: '100%',
+            height: 40,
+            borderColor: 'gray',
+            borderWidth: 1,
+            marginBottom: 20,
+            paddingHorizontal: 10,
+            borderRadius: 4,
+          }}
+          placeholder="Enter document name"
           value={fileName}
           onChangeText={setFileName}
           editable={!loading}
         />
 
-        <TouchableOpacity 
-          style={[styles.button, styles.uploadButton]} 
-          onPress={handleUpload}
+        {images.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            {images.map((uri, index) => (
+              <View 
+                key={index} 
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 10,
+                  padding: 10,
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 4,
+                }}
+              >
+                <Image 
+                  source={{ uri }} 
+                  style={{ width: 50, height: 50, marginRight: 10 }} 
+                />
+                <Text>Page {index + 1}</Text>
+                <Button
+                  mode="text"
+                  onPress={() => removeImage(index)}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  Remove
+                </Button>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Button
+          mode="contained"
+          onPress={takePicture}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
-            {loading ? 'Processing...' : 'Upload Document'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          Take Picture
+        </Button>
+
+        {images.length > 0 && (
+          <Button
+            mode="contained"
+            onPress={handleUpload}
+            disabled={loading}
+            style={{ marginTop: 10 }}
+          >
+            {loading ? 'Processing...' : 'Create and Upload PDF'}
+          </Button>
+        )}
+      </ScrollView>
+    </Background>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 20,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  uploadButton: {
-    backgroundColor: '#34C759',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  imagePreviewContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  imagePreview: {
-    width: 100,
-    height: 100,
-    margin: 5,
-    borderRadius: 8,
-  },
-});
-
-export default UploadDocScreen;
+}
