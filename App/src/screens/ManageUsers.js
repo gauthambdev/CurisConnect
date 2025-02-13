@@ -1,123 +1,209 @@
-"use client"
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { db } from '../firebaseConfig';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
-import React, { useState } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native"
-import { useFocusEffect } from "@react-navigation/native"
-import Background from "../components/Background"
-import Header from "../components/Header"
-import Button from "../components/Button"
-import SearchBar from "../components/SearchBar"
-import { theme } from "../core/theme"
-import { fetchUsers, deleteUser } from "../api/users"
+const ManageUsers = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('patient');
 
-const UserItem = ({ user, onDelete }) => (
-  <View style={styles.userItem}>
-    <Text style={styles.userName}>{user.name}</Text>
-    <Text style={styles.userRole}>{user.role}</Text>
-    <TouchableOpacity onPress={() => onDelete(user.id)} style={styles.deleteButton}>
-      <Text style={styles.deleteButtonText}>Delete</Text>
-    </TouchableOpacity>
-  </View>
-)
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, orderBy('firstName'));
+        const querySnapshot = await getDocs(q);
+        
+        const fetchedUsers = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setUsers(fetchedUsers);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError('Failed to fetch users. Please try again later.');
+        setLoading(false);
+      }
+    };
 
-const ManageUsers = ({ navigation }) => {
-  const [users, setUsers] = useState([])
-  const [filteredUsers, setFilteredUsers] = useState([])
-  const [searchQuery, setSearchQuery] = useState("")
+    fetchUsers();
+  }, []);
 
-  const loadUsers = async () => {
-    try {
-      const fetchedUsers = await fetchUsers()
-      setUsers(fetchedUsers)
-      setFilteredUsers(fetchedUsers)
-    } catch (error) {
-      console.error("Error fetching users:", error)
-      Alert.alert("Error", "Failed to load users. Please try again.")
+
+  const calculateAge = (dob) => {
+    if (!dob) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
+    return age;
+  };
+
+  const UserTable = ({ users }) => (
+    <ScrollView horizontal>
+      <View>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerCell}>First Name</Text>
+          <Text style={styles.headerCell}>Last Name</Text>
+          <Text style={styles.headerCell}>Age</Text>
+          <Text style={styles.headerCell}>Sex</Text>
+          <Text style={styles.headerCell}>Contact</Text>
+          <Text style={styles.headerCell}>Email</Text>
+        </View>
+        <ScrollView>
+          {users.length === 0 ? (
+            <View style={styles.row}>
+              <Text style={styles.noDataText}>No users found</Text>
+            </View>
+          ) : (
+            users.map((user) => (
+              <View key={user.id} style={styles.row}>
+                <Text style={styles.cell}>{user.firstName}</Text>
+                <Text style={styles.cell}>{user.lastName}</Text>
+                <Text style={styles.cell}>{calculateAge(user.dob)}</Text>
+                <Text style={styles.cell}>{user.sex}</Text>
+                <Text style={styles.cell}>{user.contact}</Text>
+                <Text style={styles.cell}>{user.email}</Text>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </View>
+    </ScrollView>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
   }
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadUsers()
-    }, [loadUsers]), // Added loadUsers to dependencies
-  )
-
-  const handleSearch = (query) => {
-    setSearchQuery(query)
-    const filtered = users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(query.toLowerCase()) || user.role.toLowerCase().includes(query.toLowerCase()),
-    )
-    setFilteredUsers(filtered)
-  }
-
-  const handleDelete = async (userId) => {
-    try {
-      await deleteUser(userId)
-      setUsers(users.filter((user) => user.id !== userId))
-      setFilteredUsers(filteredUsers.filter((user) => user.id !== userId))
-    } catch (error) {
-      console.error("Error deleting user:", error)
-      Alert.alert("Error", "Failed to delete user. Please try again.")
-    }
-  }
-
-  const handleAddUser = () => {
-    navigation.navigate("AddUser")
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
   }
 
   return (
-    <Background>
-      <Header>Manage Users</Header>
-      <SearchBar placeholder="Search users..." onChangeText={handleSearch} value={searchQuery} />
-      <FlatList
-        data={filteredUsers}
-        renderItem={({ item }) => <UserItem user={item} onDelete={handleDelete} />}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
-      />
-      <Button mode="contained" onPress={handleAddUser} style={styles.addButton}>
-        Add New User
-      </Button>
-    </Background>
-  )
-}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Manage Users</Text>
+      </View>
+      
+      <View style={styles.tabContainer}>
+        {['patient', 'doctor', 'nurse'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={[
+              styles.tab,
+              activeTab === tab && styles.activeTab
+            ]}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === tab && styles.activeTabText
+            ]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.tableContainer}>
+        <UserTable 
+          users={users.filter(user => user.role === activeTab)}
+        />
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  list: {
+  container: {
     flex: 1,
-    width: "100%",
+    backgroundColor: '#fff',
+    padding: 16,
   },
-  userItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 15,
+  header: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: '#e5e7eb',
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: theme.colors.text,
+  tab: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginRight: 8,
   },
-  userRole: {
-    fontSize: 14,
-    color: theme.colors.secondary,
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#3b82f6',
   },
-  deleteButton: {
-    backgroundColor: theme.colors.error,
-    padding: 5,
-    borderRadius: 5,
+  tabText: {
+    color: '#6b7280',
   },
-  deleteButtonText: {
-    color: theme.colors.surface,
-    fontSize: 12,
+  activeTabText: {
+    color: '#3b82f6',
+    fontWeight: 'bold',
   },
-  addButton: {
-    margin: 10,
+  tableContainer: {
+    flex: 1,
   },
-})
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+  },
+  headerCell: {
+    width: 120,
+    paddingHorizontal: 12,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  row: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingVertical: 12,
+  },
+  cell: {
+    width: 120,
+    paddingHorizontal: 12,
+  },
+  noDataText: {
+    textAlign: 'center',
+    padding: 20,
+    color: '#6b7280',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ef4444',
+    textAlign: 'center',
+  },
+});
 
-export default ManageUsers
-
+export default ManageUsers;

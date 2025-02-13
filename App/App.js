@@ -12,8 +12,10 @@ import {
   PatientDashboard,
   NurseDashboard,
   AdminDashboard,
-  UploadDocScreen,  // Import new screens
+  UploadDocScreen,  
   BookAppointments,
+  MedicalHistory,
+  ManageUsers
 } from './src/screens';
 
 
@@ -39,7 +41,8 @@ export default function App() {
           <Stack.Screen name="UploadDocScreen" component={UploadDocScreen} />
           <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
           <Stack.Screen name="BookAppointments" component={BookAppointments} />
-
+          <Stack.Screen name="MedicalHistory" component={MedicalHistory} />
+          <Stack.Screen name="ManageUsers" component={ManageUsers} />
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>
