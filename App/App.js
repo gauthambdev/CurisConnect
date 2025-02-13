@@ -1,8 +1,8 @@
-import React from 'react'
-import { Provider } from 'react-native-paper'
-import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
-import { theme } from './src/core/theme'
+import React from 'react';
+import { Provider } from 'react-native-paper';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { theme } from './src/core/theme';
 import {
   StartScreen,
   LoginScreen,
@@ -12,10 +12,13 @@ import {
   PatientDashboard,
   NurseDashboard,
   AdminDashboard,
-  UploadDocScreen
-} from './src/screens'
+  UploadDocScreen,  // Import new screens
+  BookAppointments,
+  MedicalHistory
+} from './src/screens';
 
-const Stack = createStackNavigator()
+
+const Stack = createStackNavigator();
 
 export default function App() {
   return (
@@ -35,13 +38,15 @@ export default function App() {
           <Stack.Screen name="NurseDashboard" component={NurseDashboard} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
           <Stack.Screen name="UploadDocScreen" component={UploadDocScreen} />
+          <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
 
-          <Stack.Screen 
-            name="ResetPasswordScreen"
-            component={ResetPasswordScreen}
-          />
+          {/* Adding the new screens */}
+          <Stack.Screen name="UpcomingAppointments" component={UpcomingAppointments} />
+          <Stack.Screen name="BookAppointments" component={BookAppointments} />
+          <Stack.Screen name="MedicalHistory" component={MedicalHistory} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>
-  )
+  );
 }
