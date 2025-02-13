@@ -7,3 +7,4 @@ export function BookAppointments() {
     );
   }
   
+export default BookAppointments;

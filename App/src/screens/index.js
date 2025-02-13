@@ -7,3 +7,4 @@ export { default as PatientDashboard } from './PatientDashboard';
 export { default as NurseDashboard } from './NurseDashboard';
 export { default as AdminDashboard } from './AdminDashboard';
 export { default as UploadDocScreen } from './UploadDocScreen';
+export { default as BookAppointments } from './BookAppointments';
