@@ -10,3 +10,4 @@ export { default as UploadDocScreen } from './UploadDocScreen';
 export { default as BookAppointments } from './BookAppointments';
 export { default as MedicalHistory } from './MedicalHistory';
 export { default as ManageUsers } from './ManageUsers';
+export { default as SystemSettings } from './SystemSettings';

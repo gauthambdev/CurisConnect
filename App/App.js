@@ -1,7 +1,7 @@
 import React from 'react';
-import { Provider } from 'react-native-paper';
+import { Provider as PaperProvider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack'; // Still correct for 6.x
 import { theme } from './src/core/theme';
 import {
   StartScreen,
@@ -15,15 +15,15 @@ import {
   UploadDocScreen,  
   BookAppointments,
   MedicalHistory,
-  ManageUsers
+  ManageUsers,
+  SystemSettings
 } from './src/screens';
-
 
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <Provider theme={theme}>
+    <PaperProvider theme={theme}>
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="StartScreen"
@@ -43,8 +43,9 @@ export default function App() {
           <Stack.Screen name="BookAppointments" component={BookAppointments} />
           <Stack.Screen name="MedicalHistory" component={MedicalHistory} />
           <Stack.Screen name="ManageUsers" component={ManageUsers} />
+          <Stack.Screen name="SystemSettings" component={SystemSettings} />
         </Stack.Navigator>
       </NavigationContainer>
-    </Provider>
+    </PaperProvider>
   );
 }
