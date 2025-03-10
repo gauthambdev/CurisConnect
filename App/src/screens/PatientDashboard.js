@@ -1,66 +1,86 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Background from '../components/Background';
 import Logo from '../components/Logo';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import DashboardCard from '../components/DashboardCard';
 import { logout } from '../helpers/logout';
+import { theme } from '../core/theme';
 
 const PatientDashboard = ({ navigation }) => (
-  <Background>
-    <Logo />
-    <Header>Patient Dashboard</Header>
-    <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-      <DashboardCard 
-        title="Upcoming Appointments" 
-        action={{ 
-          label: "View", 
-          onPress: () => navigation.navigate('ViewAppointments') 
-        }} 
-      />
-      <DashboardCard 
-        title="Book Appointments" 
-        action={{ 
-          label: "Book", 
-          onPress: () => navigation.navigate('BookAppointments') 
-        }} 
-      />
-      <DashboardCard 
-        title="Upload Documents" 
-        action={{ 
-          label: "Upload", 
-          onPress: () => navigation.navigate('UploadDocScreen') 
-        }} 
-      />
-      <DashboardCard 
-        title="Medical History" 
-        action={{ 
-          label: "View", 
-          onPress: () => navigation.navigate('MedicalHistory') 
-        }} 
-      />
-    </ScrollView>
-    <View style={styles.logoutButtonContainer}>
-      <Button
-        mode="outlined"
-        onPress={() => logout(navigation)} // Call the logout function
-      >
-        Logout
-      </Button>
-    </View>
-  </Background>
+  <SafeAreaView style={styles.safeArea}>
+    <Background>
+      <Logo />
+      <Header>Patient Dashboard</Header>
+      <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <DashboardCard 
+          title="Upcoming Appointments" 
+          action={{ 
+            label: "View", 
+            onPress: () => navigation.navigate('ViewAppointments') 
+          }} 
+        />
+        <DashboardCard 
+          title="Book Appointments" 
+          action={{ 
+            label: "Book", 
+            onPress: () => navigation.navigate('BookAppointments') 
+          }} 
+        />
+        <DashboardCard 
+          title="Upload Documents" 
+          action={{ 
+            label: "Upload", 
+            onPress: () => navigation.navigate('UploadDocScreen') 
+          }} 
+        />
+        <DashboardCard 
+          title="Medical History" 
+          action={{ 
+            label: "View", 
+            onPress: () => navigation.navigate('MedicalHistory') 
+          }} 
+        />
+        <DashboardCard 
+          title="System Settings" 
+          action={{ 
+            label: "View", 
+            onPress: () => navigation.navigate('SystemSettings') 
+          }} 
+        />
+      </ScrollView>
+      <View style={styles.logoutButtonContainer}>
+        <Button
+          mode="outlined"
+          onPress={() => logout(navigation)}
+          style={styles.backButton} 
+        >
+          Logout
+        </Button>
+      </View>
+    </Background>
+  </SafeAreaView>
 );
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
   scrollViewContainer: {
-    flexGrow: 1,  // Ensures content takes up space even if it's small
-    paddingBottom: 20, // Ensures some space for the logout button at the bottom
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   logoutButtonContainer: {
-    marginTop: 20, // Adds space above the logout button
-    paddingHorizontal: 20, // Adds horizontal padding
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    width: '100%',
+  },
+  backButton: {
+    width: '100%',
+    borderColor: theme.colors.primary,
   },
 });
 
