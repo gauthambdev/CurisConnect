@@ -15,7 +15,7 @@ const SystemSettings = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollViewContainer}>
           <DashboardCard 
             title="Profile Settings" 
-            action={{ label: "Edit", onPress: () => navigation.navigate("ProfileSettings") }} 
+            action={{ label: "Edit", onPress: () => navigation.navigate("ProfileScreen") }} 
           />
           <DashboardCard 
             title="Notification Preferences" 
@@ -28,6 +28,10 @@ const SystemSettings = ({ navigation }) => {
           <DashboardCard 
             title="App Preferences" 
             action={{ label: "Customize", onPress: () => navigation.navigate("AppPreferences") }} 
+          />
+           <DashboardCard 
+            title="Remote Update" 
+            action={{ label: "Update", onPress: () => navigation.navigate("RemoteUpdate") }} 
           />
         </ScrollView>
         <View style={styles.buttonContainer}>
