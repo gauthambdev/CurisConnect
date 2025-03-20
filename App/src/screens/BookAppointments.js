@@ -41,6 +41,7 @@ const BookAppointments = ({ navigation }) => {
     { key: "09:00 AM", value: "09:00 AM" },
     { key: "10:00 AM", value: "10:00 AM" },
     { key: "11:00 AM", value: "11:00 AM" },
+    { key: "12:00 PM", value: "12:00 PM" },
     { key: "01:00 PM", value: "01:00 PM" },
     { key: "02:00 PM", value: "02:00 PM" },
     { key: "03:00 PM", value: "03:00 PM" },
@@ -149,7 +150,6 @@ const BookAppointments = ({ navigation }) => {
             placeholderTextColor={theme.colors.placeholder}
             value={date}
             onChangeText={setDate}
-            keyboardType="numeric"
           />
 
           {/* Time Selection */}

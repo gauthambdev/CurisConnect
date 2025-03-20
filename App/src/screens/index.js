@@ -16,4 +16,3 @@ export { default as ProfileScreen } from './ProfileScreen';
 export { default as QuickDiagnosis} from './QuickDiagnosis';
 export { default as UpcomingAppointments} from './UpcomingAppointments';
 export { default as AppPreferences} from './AppPreferences';
-
