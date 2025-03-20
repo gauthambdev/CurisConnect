@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, ActivityIndicator, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, ActivityIndicator, ScrollView, StyleSheet, Dimensions } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Background from '../components/Background';
 import Header from '../components/Header';
 import Button from '../components/Button';
-import BackButton from '../components/BackButton'; // Imported from components folder
+import BackButton from '../components/BackButton';
 import { theme } from '../core/theme';
+
+// Get screen width to constrain elements
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MAX_CONTENT_WIDTH = Math.min(SCREEN_WIDTH - 40, 300); // Constrained width to prevent overflow
 
 const QuickDiagnosis = ({ navigation }) => {
   const [symptoms, setSymptoms] = useState("");
@@ -51,23 +55,168 @@ const QuickDiagnosis = ({ navigation }) => {
 
   const mapSymptomToFeature = (symptom) => {
     const lowerSymptom = symptom.toLowerCase().trim();
-    if (lowerSymptom.includes("fever") && features.includes("Temp")) return { name: "Temp", value: "1" };
-    if (lowerSymptom.includes("high fever") && features.includes("Temp")) return { name: "Temp", value: "2" };
-    if (lowerSymptom.includes("cough") && features.includes("SeverityCough")) return { name: "SeverityCough", value: "1" };
-    if (lowerSymptom.includes("severe cough") && features.includes("SeverityCough")) return { name: "SeverityCough", value: "2" };
-    if (lowerSymptom.includes("chest pain") && features.includes("ChestPainAnginaYesNo")) return { name: "ChestPainAnginaYesNo", value: "1" };
-    if (lowerSymptom.includes("vomit") && features.includes("Vomiting")) return { name: "Vomiting", value: "1" };
-    if (lowerSymptom.includes("headache") && features.includes("HeadacheFrontal")) return { name: "HeadacheFrontal", value: "1" };
-    if (lowerSymptom.includes("rash") && features.includes("SkinErythemamaculesRashHx")) return { name: "SkinErythemamaculesRashHx", value: "1" };
-    if (lowerSymptom.includes("diarrhea") && features.includes("DiarrheaSx")) return { name: "DiarrheaSx", value: "1" };
-    if (lowerSymptom.includes("fatigue") && features.includes("GeneralizedFatigue")) return { name: "GeneralizedFatigue", value: "1" };
-    if (lowerSymptom.includes("shortness of breath") && features.includes("ShortnessOfBreath")) return { name: "ShortnessOfBreath", value: "1" };
-    if (lowerSymptom.includes("sore throat") && features.includes("SoreThroatHx")) return { name: "SoreThroatHx", value: "1" };
-    if (lowerSymptom.includes("joint pain") && features.includes("JointPain")) return { name: "JointPain", value: "1" };
-    if (lowerSymptom.includes("nausea") && features.includes("Nausea")) return { name: "Nausea", value: "1" };
-    if (lowerSymptom.includes("abdominal pain") && features.includes("AbdominalPain")) return { name: "AbdominalPain", value: "1" };
-    if (lowerSymptom.includes("chills") && features.includes("Chills")) return { name: "Chills", value: "1" };
-    if (lowerSymptom.includes("sweating") && features.includes("SweatingExcessive")) return { name: "SweatingExcessive", value: "1" };
+
+    // Define a mapping of symptoms to features with synonyms and severity levels
+    const symptomFeatureMap = [
+      {
+        keywords: ["fever", "high temperature", "hot", "febrile"],
+        feature: "Temp",
+        values: {
+          mild: "1", // Regular fever
+          severe: "2", // High fever
+        },
+      },
+      {
+        keywords: ["cough", "coughing"],
+        feature: "SeverityCough",
+        values: {
+          mild: "1", // Regular cough
+          severe: "2", // Severe cough
+        },
+      },
+      {
+        keywords: ["chest pain", "chest discomfort", "angina"],
+        feature: "ChestPainAnginaYesNo",
+        values: {
+          default: "1", // Presence of chest pain
+        },
+      },
+      {
+        keywords: ["vomit", "vomiting", "throwing up", "nauseated"],
+        feature: "Vomiting",
+        values: {
+          default: "1", // Presence of vomiting
+        },
+      },
+      {
+        keywords: ["headache", "head pain", "migraine"],
+        feature: "HeadacheFrontal",
+        values: {
+          default: "1", // Presence of headache
+        },
+      },
+      {
+        keywords: ["rash", "skin irritation", "hives", "red spots"],
+        feature: "SkinErythemamaculesRashHx",
+        values: {
+          default: "1", // Presence of rash
+        },
+      },
+      {
+        keywords: ["diarrhea", "loose stools", "frequent bowel movements"],
+        feature: "DiarrheaSx",
+        values: {
+          default: "1", // Presence of diarrhea
+        },
+      },
+      {
+        keywords: ["fatigue", "tiredness", "exhaustion", "weakness"],
+        feature: "GeneralizedFatigue",
+        values: {
+          default: "1", // Presence of fatigue
+        },
+      },
+      {
+        keywords: ["shortness of breath", "difficulty breathing", "breathlessness", "dyspnea"],
+        feature: "ShortnessOfBreath",
+        values: {
+          default: "1", // Presence of shortness of breath
+        },
+      },
+      {
+        keywords: ["sore throat", "throat pain", "scratchy throat"],
+        feature: "SoreThroatHx",
+        values: {
+          default: "1", // Presence of sore throat
+        },
+      },
+      {
+        keywords: ["joint pain", "arthritis", "joint stiffness"],
+        feature: "JointPain",
+        values: {
+          default: "1", // Presence of joint pain
+        },
+      },
+      {
+        keywords: ["nausea", "queasy", "sick to stomach"],
+        feature: "Nausea",
+        values: {
+          default: "1", // Presence of nausea
+        },
+      },
+      {
+        keywords: ["abdominal pain", "stomach pain", "belly ache", "gut pain"],
+        feature: "AbdominalPain",
+        values: {
+          default: "1", // Presence of abdominal pain
+        },
+      },
+      {
+        keywords: ["chills", "shivering", "cold flashes"],
+        feature: "Chills",
+        values: {
+          default: "1", // Presence of chills
+        },
+      },
+      {
+        keywords: ["sweating", "excessive sweat", "night sweats"],
+        feature: "SweatingExcessive",
+        values: {
+          default: "1", // Presence of excessive sweating
+        },
+      },
+      {
+        keywords: ["dizziness", "lightheaded", "vertigo"],
+        feature: "Dizziness",
+        values: {
+          default: "1", // Presence of dizziness
+        },
+      },
+      {
+        keywords: ["fever with rash", "fever and rash"],
+        feature: "FeverWithRash",
+        values: {
+          default: "1", // Presence of fever with rash
+        },
+      },
+      {
+        keywords: ["muscle pain", "myalgia", "muscle ache", "body pain"],
+        feature: "MusclePain",
+        values: {
+          default: "1", // Presence of muscle pain
+        },
+      },
+      {
+        keywords: ["runny nose", "nasal congestion", "stuffy nose"],
+        feature: "NasalCongestion",
+        values: {
+          default: "1", // Presence of nasal congestion
+        },
+      },
+      {
+        keywords: ["loss of appetite", "not hungry", "reduced appetite"],
+        feature: "LossOfAppetite",
+        values: {
+          default: "1", // Presence of loss of appetite
+        },
+      },
+    ];
+
+    // Find the matching symptom mapping
+    for (const mapping of symptomFeatureMap) {
+      const matchedKeyword = mapping.keywords.find(keyword => lowerSymptom.includes(keyword));
+      if (matchedKeyword && features.includes(mapping.feature)) {
+        // Check for severity keywords
+        if (mapping.values.severe && (lowerSymptom.includes("severe") || lowerSymptom.includes("high") || lowerSymptom.includes("extreme"))) {
+          return { name: mapping.feature, value: mapping.values.severe };
+        }
+        if (mapping.values.mild && (lowerSymptom.includes("mild") || lowerSymptom.includes("slight"))) {
+          return { name: mapping.feature, value: mapping.values.mild };
+        }
+        return { name: mapping.feature, value: mapping.values.default || mapping.values.mild || "1" };
+      }
+    }
+
     console.log(`No feature mapped for symptom: ${symptom}`);
     return null;
   };
@@ -119,7 +268,7 @@ const QuickDiagnosis = ({ navigation }) => {
       setDiagnosis(response.data);
 
       if (response.data.Diseases.length === 0) {
-        setError("No specific conditions identified. Try adding more symptoms for a better diagnosis.");
+        setError("No specific conditions identified. Try adding more symptoms or rephrasing them (e.g., 'high fever' or 'severe cough').");
       }
     } catch (error) {
       console.error("Diagnosis API error:", error.response?.status, error.response?.data || error.message);
@@ -151,13 +300,14 @@ const QuickDiagnosis = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <Background>
-        {/* Back Button from components */}
         <BackButton style={styles.backButton} onPress={() => navigation.navigate('Dashboard')} />
         <Header style={styles.header}>Quick Diagnosis</Header>
-        <ScrollView 
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={styles.content}
           horizontal={false}
           showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
         >
           {/* Symptom Input */}
           <Text style={styles.inputLabel}>Enter Your Symptoms:</Text>
@@ -200,16 +350,19 @@ const QuickDiagnosis = ({ navigation }) => {
               </Text>
               {diagnosis.Diseases.length > 0 && (
                 <>
-                  <Text style={styles.resultTitle}>Possible Conditions:</Text>
-                  {diagnosis.Diseases.map((disease, index) => {
-                    const diseaseName = Object.keys(disease)[0];
-                    const probability = Math.round(Object.values(disease)[0] * 100);
-                    return (
-                      <Text key={index} style={styles.diseaseText}>
-                        {diseaseName}: {probability}%
-                      </Text>
-                    );
-                  })}
+                  <Text style={styles.resultTitle}>Possible Conditions (Top 5):</Text>
+                  {diagnosis.Diseases
+                    .sort((a, b) => parseFloat(Object.values(b)[0]) - parseFloat(Object.values(a)[0])) // Sort by probability descending
+                    .slice(0, 5) // Take top 5
+                    .map((disease, index) => {
+                      const diseaseName = Object.keys(disease)[0];
+                      const probability = Math.round(Object.values(disease)[0] * 100);
+                      return (
+                        <Text key={index} style={styles.diseaseText}>
+                          {diseaseName}: {probability}%
+                        </Text>
+                      );
+                    })}
                 </>
               )}
             </View>
@@ -223,12 +376,18 @@ const QuickDiagnosis = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: SCREEN_WIDTH, // Ensure container matches screen width
+    alignItems: 'center', // Center content
+  },
+  scrollView: {
+    flex: 1,
+    width: SCREEN_WIDTH, // Ensure ScrollView matches screen width
   },
   content: {
     padding: 20,
-    flexGrow: 1,
-    alignItems: 'center',
-    width: '100%',
+    alignItems: 'center', // Center content
+    width: SCREEN_WIDTH, // Constrain content width to screen width
+    paddingBottom: 40, // Add padding to ensure the bottom content is visible
   },
   backButton: {
     position: 'absolute',
@@ -238,9 +397,11 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: 20,
-    fontSize: 36,
-    color: '#800080',
+    fontSize: 28, // Reduced font size from 36 to 28
+    color: theme.colors.primary,
     fontWeight: 'bold',
+    textAlign: 'center',
+    width: SCREEN_WIDTH, // Ensure the header takes the full width for centering
   },
   inputLabel: {
     fontSize: 16,
@@ -248,6 +409,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: 8,
     textAlign: 'center',
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
   input: {
     borderWidth: 2,
@@ -256,7 +418,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 20,
     height: 80,
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
     textAlignVertical: 'top',
     backgroundColor: '#fff',
     fontSize: 16,
@@ -283,13 +445,13 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary || '#666',
     textAlign: 'center',
     marginBottom: 15,
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
     lineHeight: 18,
   },
   resultContainer: {
     marginTop: 20,
     alignItems: 'center',
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
   resultTitle: {
     fontSize: 18,
@@ -298,27 +460,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
     textAlign: 'center',
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
   result: {
     fontSize: 16,
     color: theme.colors.text,
     lineHeight: 24,
     textAlign: 'center',
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
   diseaseText: {
     fontSize: 16,
     color: theme.colors.text,
     lineHeight: 24,
     textAlign: 'center',
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
   error: {
     fontSize: 14,
     color: theme.colors.error,
     marginVertical: 10,
     textAlign: 'center',
-    width: 300,
+    width: MAX_CONTENT_WIDTH, // Constrain width
   },
 });
 

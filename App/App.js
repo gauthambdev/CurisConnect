@@ -20,6 +20,7 @@ import {
   QuickDiagnosis,
   UpcomingAppointments,
   AppPreferences,
+  NotificationSettings
 } from './src/screens';
 
 const Stack = createStackNavigator();
@@ -52,6 +53,7 @@ export default function App() {
           <Stack.Screen name="QuickDiagnosis" component={QuickDiagnosis} />
           <Stack.Screen name="UpcomingAppointments" component={UpcomingAppointments} />
           <Stack.Screen name="AppPreferences" component={AppPreferences} />
+          <Stack.Screen name='NotificationSettings' component={NotificationSettings} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
