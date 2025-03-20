@@ -13,7 +13,6 @@ import { theme } from '../core/theme';
 const ProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState({ value: '', error: '' });
   const [lastName, setLastName] = useState({ value: '', error: '' });
-  const [username, setUsername] = useState({ value: '', error: '' });
   const [email, setEmail] = useState({ value: '', error: '' });
   const [phoneNumber, setPhoneNumber] = useState({ value: '', error: '' });
   const [birthDate, setBirthDate] = useState({ value: '', error: '' });
@@ -31,7 +30,6 @@ const ProfileScreen = ({ navigation }) => {
             const userData = userDoc.data();
             setFirstName({ value: userData.firstName || '', error: '' });
             setLastName({ value: userData.lastName || '', error: '' });
-            setUsername({ value: userData.username || '', error: '' });
             setEmail({ value: userData.email || '', error: '' });
             setPhoneNumber({ value: userData.phoneNumber || '', error: '' });
             setBirthDate({ value: userData.birthDate || '', error: '' });
@@ -54,7 +52,6 @@ const ProfileScreen = ({ navigation }) => {
         await updateDoc(userDocRef, {
           firstName: firstName.value,
           lastName: lastName.value,
-          username: username.value,
           email: email.value,
           phoneNumber: phoneNumber.value,
           birthDate: birthDate.value,
@@ -107,15 +104,6 @@ const ProfileScreen = ({ navigation }) => {
               onChangeText={(text) => setLastName({ value: text, error: '' })}
               error={!!lastName.error}
               errorText={lastName.error}
-              editable={isEditing}
-            />
-            <TextInput
-              label="Username"
-              returnKeyType="next"
-              value={username.value}
-              onChangeText={(text) => setUsername({ value: text, error: '' })}
-              error={!!username.error}
-              errorText={username.error}
               editable={isEditing}
             />
             <TextInput
