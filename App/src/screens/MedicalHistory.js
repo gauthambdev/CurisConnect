@@ -89,7 +89,7 @@ const MedicalHistory = ({ navigation }) => {
                         style={styles.actionButton}
                         labelStyle={styles.buttonLabel}
                       >
-                        Open
+                        open
                       </Button>
                     </DataTable.Cell>
                   </DataTable.Row>
@@ -167,10 +167,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   actionButton: {
-    paddingHorizontal: 5,
-    paddingVertical: 5,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     backgroundColor: theme.colors.primary,
-    minWidth: 70,
+    minWidth: 50,
   },
   buttonLabel: {
     color: theme.colors.surface,

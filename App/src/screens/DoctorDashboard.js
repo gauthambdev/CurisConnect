@@ -102,3 +102,8 @@ const styles = StyleSheet.create({
 });
 
 export default DoctorDashboard;
+
+
+// dynamic greeting 
+// nurse duty schdules 
+//patient consultations
