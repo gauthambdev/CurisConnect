@@ -42,7 +42,6 @@ const BookAppointments = ({ navigation }) => {
   ];
 
   const times = [
-<<<<<<< HEAD
     "09:00 AM",
     "10:00 AM",
     "11:00 AM",
@@ -50,16 +49,6 @@ const BookAppointments = ({ navigation }) => {
     "02:00 PM",
     "03:00 PM",
     "04:00 PM",
-=======
-    { key: "09:00 AM", value: "09:00 AM" },
-    { key: "10:00 AM", value: "10:00 AM" },
-    { key: "11:00 AM", value: "11:00 AM" },
-    { key: "12:00 PM", value: "12:00 PM" },
-    { key: "01:00 PM", value: "01:00 PM" },
-    { key: "02:00 PM", value: "02:00 PM" },
-    { key: "03:00 PM", value: "03:00 PM" },
-    { key: "04:00 PM", value: "04:00 PM" },
->>>>>>> c44a41f0879cee47181606c2e695b36a09404b99
   ];
 
   // Request notification permissions, set up notification handler, and fetch notification preference
@@ -363,7 +352,6 @@ const BookAppointments = ({ navigation }) => {
               />
             </View>
 
-<<<<<<< HEAD
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Select Time:</Text>
               <TouchableOpacity
@@ -375,17 +363,6 @@ const BookAppointments = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             </View>
-=======
-          {/* Date Input */}
-          <Text style={styles.label}>Date (e.g., YYYY-MM-DD):</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 2025-03-20"
-            placeholderTextColor={theme.colors.placeholder}
-            value={date}
-            onChangeText={setDate}
-          />
->>>>>>> c44a41f0879cee47181606c2e695b36a09404b99
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Additional Notes (Optional):</Text>

@@ -15,10 +15,6 @@ export { default as SystemSettings } from './SystemSettings';
 export { default as ProfileScreen } from './ProfileScreen';
 export { default as QuickDiagnosis} from './QuickDiagnosis';
 export { default as UpcomingAppointments} from './UpcomingAppointments';
-<<<<<<< HEAD
 export { default as AppPreferences} from './AppPreferences';
 export { default as NotificationSettings} from './NotificationSettings';
 
-=======
-export { default as AppPreferences} from './AppPreferences';
->>>>>>> c44a41f0879cee47181606c2e695b36a09404b99

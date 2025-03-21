@@ -44,15 +44,7 @@ const UpcomingAppointments = ({ navigation }) => {
             notes: data.notes || '',
           };
         });
-
-        // Sort appointments by date and time
-        const sortedAppointments = appointmentsList.sort((a, b) => {
-          const dateA = new Date(`${a.date}T${a.time}`);
-          const dateB = new Date(`${b.date}T${b.time}`);
-          return dateA - dateB;
-        });
-
-        setAppointments(sortedAppointments);
+        setAppointments(appointmentsList);
       } catch (error) {
         console.error('Error fetching appointments:', error.message);
         setError(`Failed to fetch appointments: ${error.message}`);
