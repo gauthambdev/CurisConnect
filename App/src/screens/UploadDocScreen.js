@@ -6,7 +6,7 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import jsPDF from 'jspdf';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
-
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Background from '../components/Background'
 import Logo from '../components/Logo'
 import Header from '../components/Header'
@@ -18,7 +18,7 @@ export default function UploadDocScreen({ navigation }) {
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const storeInFirebase = async (cloudinaryUrl) => {
+  const storeInFirebase = async (docURL) => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) throw new Error('No user logged in');
@@ -28,7 +28,7 @@ export default function UploadDocScreen({ navigation }) {
         uploadedTo: currentUser.uid,
         filename: fileName,
         timestamp: serverTimestamp(),
-        url: cloudinaryUrl,
+        url: docURL,
       };
 
       const docRef = await addDoc(collection(db, 'uploads'), uploadData);
@@ -36,35 +36,6 @@ export default function UploadDocScreen({ navigation }) {
       return docRef.id;
     } catch (error) {
       console.error('Error storing in Firebase:', error);
-      throw error;
-    }
-  };
-
-  const uploadToCloudinary = async (pdfUri) => {
-    try {
-      const cloudName = 'dle1vya8b';
-      const uploadPreset = 'diagnoses';
-
-      const formData = new FormData();
-      formData.append('file', {
-        uri: pdfUri,
-        type: 'application/pdf',
-        name: `${fileName || 'document'}.pdf`,
-      });
-      formData.append('upload_preset', uploadPreset);
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-      return data.secure_url;
-    } catch (error) {
-      console.error('Error uploading to Cloudinary:', error);
       throw error;
     }
   };
@@ -110,31 +81,58 @@ export default function UploadDocScreen({ navigation }) {
 
   const handleUpload = async () => {
     if (images.length === 0) {
-      alert('Please take at least one picture');
-      return;
+        alert("Please take at least one picture");
+        return;
     }
 
     if (!fileName.trim()) {
-      alert('Please enter a file name');
-      return;
+        alert("Please enter a file name");
+        return;
     }
 
     setLoading(true);
     try {
-      const pdfUri = await createPDF();
-      const cloudinaryUrl = await uploadToCloudinary(pdfUri);
-      await storeInFirebase(cloudinaryUrl);
-      
-      alert('Document uploaded successfully!');
-      setImages([]);
-      setFileName('');
+        // Generate the PDF URI
+        const pdfUri = await createPDF();
+
+        // Convert the file to a Blob
+        const response = await fetch(pdfUri);
+        const blob = await response.blob();
+
+        // Upload to Firebase Storage
+        const storage = getStorage();
+        const storageRef = ref(storage, `pdfs/${fileName}.pdf`);
+        const uploadTask = uploadBytesResumable(storageRef, blob);
+
+        uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log(`Upload is ${progress}% done`);
+            },
+            (error) => {
+                console.error("Upload failed:", error);
+                alert("Error uploading document");
+                setLoading(false);
+            },
+            async () => {
+                // Get download URL
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+                // Store in Firestore
+                await storeInFirebase(downloadURL)
+                alert("Document uploaded successfully!");
+                setImages([]);
+                setFileName("");
+            }
+        );
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Error uploading document');
+        console.error("Upload error:", error);
+        alert("Error uploading document");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+ };
 
   const takePicture = async () => {
     try {

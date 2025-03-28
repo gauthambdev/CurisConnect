@@ -25,16 +25,26 @@ export default function LoginScreen() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        // Fetch role from Firestore
+        // Fetch role from Firestore across all collections
         const fetchUserRole = async () => {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const userRole = userDoc.data().role;
+          const collections = ["patients", "medicalstaff", "admins"];
+          let userRole = null;
+
+          for (const collectionName of collections) {
+            const userDoc = await getDoc(doc(db, collectionName, user.uid));
+            if (userDoc.exists()) {
+              userRole = userDoc.data().role;
+              break; // Stop searching once we find the user
+            }
+          }
+
+          if (userRole) {
             navigateToDashboard(userRole);
           } else {
             Alert.alert("Error", "User role not found.");
           }
         };
+
         fetchUserRole();
       }
     });
@@ -64,21 +74,30 @@ export default function LoginScreen() {
   const onLoginPressed = async () => {
     const emailError = emailValidator(email.value);
     const passwordError = passwordValidator(password.value);
-
+  
     if (emailError || passwordError) {
       setEmail({ ...email, error: emailError });
       setPassword({ ...password, error: passwordError });
       return;
     }
-
+  
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
       const user = userCredential.user;
-
-      // Fetch role from Firestore
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const userRole = userDoc.data().role;
+  
+      // Check all collections for the user
+      const collections = ["patients", "medicalstaff", "admins"];
+      let userRole = null;
+  
+      for (const collectionName of collections) {
+        const userDoc = await getDoc(doc(db, collectionName, user.uid));
+        if (userDoc.exists()) {
+          userRole = userDoc.data().role;
+          break; // Stop searching once we find the user
+        }
+      }
+  
+      if (userRole) {
         navigateToDashboard(userRole);
       } else {
         Alert.alert("Error", "User role not found.");

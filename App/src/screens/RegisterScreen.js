@@ -51,7 +51,7 @@ export default function RegisterScreen({ navigation }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value);
       const user = userCredential.user;
 
-      await setDoc(doc(db, "users", user.uid), {
+      await setDoc(doc(db, "patients", user.uid), {
         firstName: firstName.value,
         lastName: lastName.value,
         dob: dob.value,
