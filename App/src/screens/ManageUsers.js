@@ -12,23 +12,44 @@ const ManageUsers = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("patient");
 
+  const calculateAge = (dobString) => {
+    if (!dobString) return "N/A";
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    const dayDiff = today.getDate() - dob.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+    return age;
+  };
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, orderBy("firstName"));
-        const querySnapshot = await getDocs(q);
-        const fetchedUsers = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setUsers(fetchedUsers);
+        const collections = ["patients", "medicalstaff"];
+        let allUsers = [];
+
+        for (const collectionName of collections) {
+          const usersRef = collection(db, collectionName);
+          const q = query(usersRef, orderBy("firstName"));
+          const querySnapshot = await getDocs(q);
+          const fetchedUsers = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          allUsers = [...allUsers, ...fetchedUsers];
+        }
+
+        setUsers(allUsers);
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch users. Please try again later.");
         setLoading(false);
       }
     };
+
     fetchUsers();
   }, []);
 
@@ -53,7 +74,6 @@ const ManageUsers = () => {
       <Logo />
       <Header>Manage Users</Header>
 
-      {/* Tabs for switching between roles */}
       <View style={styles.tabContainer}>
         {["patient", "doctor", "nurse"].map((tab) => (
           <TouchableOpacity
@@ -68,7 +88,6 @@ const ManageUsers = () => {
         ))}
       </View>
 
-      {/* User Table */}
       <ScrollView horizontal>
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
@@ -82,7 +101,7 @@ const ManageUsers = () => {
             {users.filter(user => user.role === activeTab).map((user) => (
               <View key={user.id} style={styles.tableRow}>
                 <Text style={styles.cell}>{user.firstName} {user.lastName}</Text>
-                <Text style={styles.cell}>{user.age}</Text>
+                <Text style={styles.cell}>{calculateAge(user.dob)}</Text>
                 <Text style={styles.cell}>{user.sex}</Text>
                 <Text style={styles.cell}>{user.contact}</Text>
                 <Text style={styles.cell}>{user.email}</Text>
