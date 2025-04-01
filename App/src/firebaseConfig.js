@@ -5,7 +5,7 @@ import { getStorage } from 'firebase/storage'; // Add this import
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC5HLMMVOoQRLZylRJJ3bKGWAak-gsC6EM",
+  apiKey: "",
   authDomain: "curis-fffdc.firebaseapp.com",
   projectId: "curis-fffdc",
   storageBucket: "curis-fffdc.firebasestorage.app",
