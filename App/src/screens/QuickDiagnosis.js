@@ -18,7 +18,7 @@ const QuickDiagnosis = ({ navigation }) => {
   const [error, setError] = useState(null);
 
   // Replace with your Gemini API key (store securely in production, e.g., environment variables)
-  const GEMINI_API_KEY = "AIzaSyBLVW6kDs3esuNNc5Ri09gmu2FRuGdyJvg"; // Obtain from Google AI Studio
+  const GEMINI_API_KEY = ""; // Obtain from Google AI Studio
   const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
   const handleDiagnosis = async () => {
