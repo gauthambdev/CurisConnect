@@ -7,7 +7,6 @@ import Logo from "../components/Logo";
 import Header from "../components/Header";
 import Button from "../components/Button";
 import DashboardCard from "../components/DashboardCard";
-import { logout } from "../helpers/logout";
 import { theme } from "../core/theme";
 
 const chartConfig = {

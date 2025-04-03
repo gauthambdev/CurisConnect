@@ -12,6 +12,7 @@ import Background from '../components/Background'
 import Header from '../components/Header'
 import Button from '../components/Button'
 import Paragraph from '../components/Paragraph'
+import { summarizeText } from '../helpers/summarizer'; 
 
 export default function UploadDocScreen({ navigation }) {
   const [images, setImages] = useState([]);
@@ -274,4 +275,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
