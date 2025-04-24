@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Image, StyleSheet, ScrollView } from 'react-native';
-import { theme } from "../core/theme";
+import { theme } from "../../core/theme";
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import jsPDF from 'jspdf';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebaseConfig';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { auth, db } from '../../firebaseConfig';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import Background from '../components/Background'
-import Header from '../components/Header'
-import Button from '../components/Button'
-import Paragraph from '../components/Paragraph'
-import { summarizeText } from '../helpers/summarizer'; 
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import Background from '../../components/Background'
+import Header from '../../components/Header'
+import Button from '../../components/Button'
+import Paragraph from '../../components/Paragraph'
 
 export default function UploadDocScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
 
   const storeInFirebase = async (docURL) => {
     try {
@@ -80,6 +81,32 @@ export default function UploadDocScreen({ navigation }) {
     }
   };
 
+  const processDocumentWithVision = async (pdfUrl, docId) => {
+    try {
+      setProcessingStatus('Extracting text from PDF...');
+      
+      // Call the Cloud Function to process the PDF
+      const functions = getFunctions();
+      const extractTextFromPdf = httpsCallable(functions, 'extract1');
+      
+      const result = await extractTextFromPdf({ pdfUrl });
+      console.log('Text extraction result:', result.data);
+      
+      // Update the Firestore document with the extracted text
+      await updateDoc(doc(db, 'uploads', docId), {
+        extractedText: result.data.text,
+        processedAt: serverTimestamp()
+      });
+      
+      setProcessingStatus('Text extraction complete');
+      return result.data;
+    } catch (error) {
+      console.error('Error processing document with Vision API:', error);
+      setProcessingStatus('Error extracting text');
+      throw error;
+    }
+  };
+
   const handleUpload = async () => {
     if (images.length === 0) {
         alert("Please take at least one picture");
@@ -92,6 +119,7 @@ export default function UploadDocScreen({ navigation }) {
     }
 
     setLoading(true);
+    setProcessingStatus('Creating PDF...');
     try {
         // Generate the PDF URI
         const pdfUri = await createPDF();
@@ -101,6 +129,7 @@ export default function UploadDocScreen({ navigation }) {
         const blob = await response.blob();
 
         // Upload to Firebase Storage
+        setProcessingStatus('Uploading PDF...');
         const storage = getStorage();
         const storageRef = ref(storage, `pdfs/${fileName}.pdf`);
         const uploadTask = uploadBytesResumable(storageRef, blob);
@@ -110,28 +139,42 @@ export default function UploadDocScreen({ navigation }) {
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 console.log(`Upload is ${progress}% done`);
+                setProcessingStatus(`Uploading: ${Math.round(progress)}%`);
             },
             (error) => {
                 console.error("Upload failed:", error);
                 alert("Error uploading document");
                 setLoading(false);
+                setProcessingStatus('');
             },
             async () => {
-                // Get download URL
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                try {
+                    // Get download URL
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-                // Store in Firestore
-                await storeInFirebase(downloadURL)
-                alert("Document uploaded successfully!");
-                setImages([]);
-                setFileName("");
+                    // Store in Firestore
+                    const docId = await storeInFirebase(downloadURL);
+                    
+                    // Process the document with Vision API
+                    await processDocumentWithVision(downloadURL, docId);
+                    
+                    alert("Document uploaded and processed successfully!");
+                    setImages([]);
+                    setFileName("");
+                } catch (error) {
+                    console.error("Processing error:", error);
+                    alert("Document was uploaded but there was an error processing the text");
+                } finally {
+                    setLoading(false);
+                    setProcessingStatus('');
+                }
             }
         );
     } catch (error) {
         console.error("Upload error:", error);
         alert("Error uploading document");
-    } finally {
         setLoading(false);
+        setProcessingStatus('');
     }
  };
 
@@ -255,6 +298,10 @@ export default function UploadDocScreen({ navigation }) {
             {loading ? 'Processing...' : 'Create and Upload PDF'}
           </Button>
         )}
+
+        {processingStatus ? (
+          <Text style={styles.statusText}>{processingStatus}</Text>
+        ) : null}
       </ScrollView>
     </Background>
   );
@@ -274,4 +321,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  statusText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: theme.colors.secondary,
+    fontStyle: 'italic'
+  }
 });

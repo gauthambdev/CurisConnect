@@ -4,7 +4,7 @@ import axios from 'axios';
 export const summarizeText = async (extractedText) => {
   try {
     // Replace with your Gemini API key and endpoint
-    const GEMINI_API_KEY = ""; // Obtain from Google AI Studio
+    const GEMINI_API_KEY = "AIzaSyBLVW6kDs3esuNNc5Ri09gmu2FRuGdyJvg"; // Obtain from Google AI Studio
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
     const prompt = `

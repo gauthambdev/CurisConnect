@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, Dimensions, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DataTable } from 'react-native-paper';
-import { auth, db } from "../firebaseConfig";
+import { auth, db } from "../../firebaseConfig";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import * as WebBrowser from "expo-web-browser";
-import Background from "../components/Background";
-import Logo from "../components/Logo";
-import Header from "../components/Header";
-import Button from "../components/Button";
-import { theme } from "../core/theme";
+import Background from "../../components/Background";
+import Logo from "../../components/Logo";
+import Header from "../../components/Header";
+import Button from "../../components/Button";
+import { theme } from "../../core/theme";
 
 const MedicalHistory = ({ navigation }) => {
   const [documents, setDocuments] = useState([]);

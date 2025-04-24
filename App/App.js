@@ -4,26 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { theme } from './src/core/theme';
 import SplashScreen from './src/components/SplashScreen'; // You'll create this component
-import {
-  StartScreen,
-  LoginScreen,
-  RegisterScreen,
-  ResetPasswordScreen,
-  DoctorDashboard,
-  PatientDashboard,
-  NurseDashboard,
-  AdminDashboard,
-  UploadDocScreen,
-  BookAppointments,
-  MedicalHistory,
-  ManageUsers,
-  SystemSettings,
-  ProfileScreen,
-  QuickDiagnosis,
-  UpcomingAppointments,
-  AppPreferences,
-  NotificationSettings
-} from './src/screens';
+import * as screens from './src/screens/index';
 
 const Stack = createStackNavigator();
 
@@ -34,27 +15,42 @@ const AppNavigator = () => (
       headerShown: false,
     }}
   >
-    <Stack.Screen name="StartScreen" component={StartScreen} />
-    <Stack.Screen name="LoginScreen" component={LoginScreen} />
-    <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
-    <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
-    <Stack.Screen name="ChangePassword" component={ResetPasswordScreen} />
-    <Stack.Screen name="DoctorDashboard" component={DoctorDashboard} />
-    <Stack.Screen name="PatientDashboard" component={PatientDashboard} />
-    <Stack.Screen name="NurseDashboard" component={NurseDashboard} />
-    <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-    <Stack.Screen name="UploadDocScreen" component={UploadDocScreen} />
-    <Stack.Screen name="BookAppointments" component={BookAppointments} />
-    <Stack.Screen name="MedicalHistory" component={MedicalHistory} />
-    <Stack.Screen name="ManageUsers" component={ManageUsers} />
-    <Stack.Screen name="SystemSettings" component={SystemSettings} />
-    <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-    <Stack.Screen name="QuickDiagnosis" component={QuickDiagnosis} />
-    <Stack.Screen name="UpcomingAppointments" component={UpcomingAppointments} />
-    <Stack.Screen name="AppPreferences" component={AppPreferences} />
-    <Stack.Screen name='NotificationSettings' component={NotificationSettings} />
+    <Stack.Screen name="StartScreen" component={screens.StartScreen} />
+    <Stack.Screen name="LoginScreen" component={screens.LoginScreen} />
+    <Stack.Screen name="RegisterScreen" component={screens.RegisterScreen} />
+    <Stack.Screen name="ResetPasswordScreen" component={screens.ResetPasswordScreen} />
+    <Stack.Screen name="ChangePassword" component={screens.ResetPasswordScreen} />
+    <Stack.Screen name="DoctorDashboard" component={screens.DoctorDashboard} />
+    <Stack.Screen name="PatientDashboard" component={screens.PatientDashboard} />
+    <Stack.Screen name="AdminDashboard" component={screens.AdminDashboard} />
+    
+    <Stack.Screen name="UploadDocScreen" component={screens.UploadDocScreen} />
+    <Stack.Screen name="BookAppointments" component={screens.BookAppointments} />
+    <Stack.Screen name="MedicalHistory" component={screens.MedicalHistory} />
+    <Stack.Screen name="ProfileScreen" component={screens.ProfileScreen} />
+    <Stack.Screen name="QuickDiagnosis" component={screens.QuickDiagnosis} />
+    <Stack.Screen name="UpcomingAppointments" component={screens.UpcomingAppointments} />
+    <Stack.Screen name="PastAppointments" component={screens.PastAppointments} />
+    <Stack.Screen name="Feedback" component={screens.Feedback} />
+    <Stack.Screen name="Pharmacies" component={screens.Pharmacies} />
+    <Stack.Screen name="Hospitals" component={screens.Hospitals} />
+
+    <Stack.Screen name="ViewPatients" component={screens.ViewPatients} />
+    <Stack.Screen name="DocDiagnoses" component={screens.DocDiagnoses} />
+    <Stack.Screen name="PatientDocs" component={screens.PatientDocs} />
+    <Stack.Screen name="DocUploadDocScreen" component={screens.DocUploadDocScreen} />
+    <Stack.Screen name="DocProfileScreen" component={screens.DocProfileScreen} />
+    <Stack.Screen name="DocPastAppointments" component={screens.DocPastAppointments} />
+    <Stack.Screen name="DocUpcomingAppointments" component={screens.DocUpcomingAppointments} />
+    <Stack.Screen name="DocFeedback" component={screens.DocFeedback} />
+
+    <Stack.Screen name="AddAdmin" component={screens.AddAdmin} />
+    <Stack.Screen name="AddUser" component={screens.AddUser} />
+    <Stack.Screen name="AddHospital" component={screens.AddHospital} />
+    <Stack.Screen name="AddDoctor" component={screens.AddDoctor} />
   </Stack.Navigator>
 );
+
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);

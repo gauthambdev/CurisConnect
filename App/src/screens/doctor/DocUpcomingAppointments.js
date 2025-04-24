@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../firebaseConfig';
-import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebaseConfig';
+import { collection, query, where, getDocs, getDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Swipeable } from 'react-native-gesture-handler';
-import Background from '../components/Background';
-import Header from '../components/Header';
-import Button from '../components/Button';
-import { theme } from '../core/theme';
+import Background from '../../components/Background';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import { theme } from '../../core/theme';
 
-const UpcomingAppointments = ({ navigation }) => {
+const DocUpcomingAppointments = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,32 +23,71 @@ const UpcomingAppointments = ({ navigation }) => {
           setLoading(false);
           return;
         }
-
+  
         const q = query(
           collection(db, 'appointments'),
-          where('userId', '==', user.uid),
+          where('docId', '==', user.uid),
           where('status', '==', 'Pending')
         );
+  
         const querySnapshot = await getDocs(q);
-        let appointmentsList = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            doctor: data.doctor,
-            department: data.department || 'N/A',
+        let appointmentsList = [];
+  
+        for (const appointmentDoc of querySnapshot.docs) {
+          const data = appointmentDoc.data();
+          const patientId = data.userId;
+  
+          const patientRef = doc(db, 'patients', patientId);
+          const patientSnap = await getDoc(patientRef);
+          const patientData = patientSnap.exists() ? patientSnap.data() : null;
+  
+          let fullName = 'Unknown';
+          let contact = 'N/A';
+          let email = 'N/A';
+          let bloodGroup = 'N/A';
+          let age = 'N/A';
+  
+          if (patientData) {
+            fullName = `${patientData.firstName} ${patientData.lastName}`;
+            contact = patientData.contact || 'N/A';
+            email = patientData.email || 'N/A';
+            bloodGroup = patientData.bloodGroup || 'N/A';
+  
+            const dob = patientData.dob;
+            if (dob) {
+              const birthDate = new Date(dob);
+              const today = new Date();
+              let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+              const m = today.getMonth() - birthDate.getMonth();
+              if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                calculatedAge--;
+              }
+              age = calculatedAge;
+            }
+          }
+  
+          appointmentsList.push({
+            id: appointmentDoc.id,
             hospital: data.hospitalName || 'N/A',
             date: data.date || 'N/A',
             time: data.time || 'N/A',
             status: data.status || 'N/A',
             notes: data.notes || '',
-          };
-        });
-
-        // Sort appointments by date and time in ascending order
-        appointmentsList = appointmentsList.sort((a, b) => {
+            patient: {
+              fullName,
+              contact,
+              email,
+              bloodGroup,
+              age
+            }
+          });
+        }
+  
+        // Sort appointments by date and time
+        appointmentsList.sort((a, b) => {
           const dateA = a.date !== 'N/A' ? new Date(a.date) : new Date(0);
           const dateB = b.date !== 'N/A' ? new Date(b.date) : new Date(0);
-
+  
           const parseTime = (time) => {
             if (time === 'N/A') return 0;
             const [timePart, period] = time.split(' ');
@@ -57,16 +96,12 @@ const UpcomingAppointments = ({ navigation }) => {
             if (period === 'AM' && hours === 12) hours = 0;
             return hours * 60 + minutes;
           };
-
+  
           const timeA = parseTime(a.time);
           const timeB = parseTime(b.time);
-
-          const dateTimeA = dateA.getTime() + timeA * 60 * 1000;
-          const dateTimeB = dateB.getTime() + timeB * 60 * 1000;
-
-          return dateTimeA - dateTimeB;
+          return dateA.getTime() + timeA * 60 * 1000 - (dateB.getTime() + timeB * 60 * 1000);
         });
-
+  
         setAppointments(appointmentsList);
       } catch (error) {
         console.error('Error fetching appointments:', error.message);
@@ -75,18 +110,22 @@ const UpcomingAppointments = ({ navigation }) => {
         setLoading(false);
       }
     };
-
+  
     fetchAppointments();
   }, []);
-
-  const handleDelete = async (appointmentId) => {
+  
+  const updateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
       const appointmentRef = doc(db, 'appointments', appointmentId);
-      await deleteDoc(appointmentRef);
+      await updateDoc(appointmentRef, {
+        status: newStatus
+      });
+      
+      // Update the local state to reflect the change
       setAppointments(appointments.filter(appointment => appointment.id !== appointmentId));
     } catch (error) {
-      console.error('Error deleting appointment:', error.message);
-      setError(`Failed to delete appointment: ${error.message}`);
+      console.error(`Error updating appointment to ${newStatus}:`, error.message);
+      setError(`Failed to update appointment: ${error.message}`);
     }
   };
 
@@ -106,22 +145,62 @@ const UpcomingAppointments = ({ navigation }) => {
     return (
       <Animated.View
         style={[
-          styles.deleteAction,
+          styles.swipeAction,
           {
             opacity: progress,
+            backgroundColor: theme.colors.success || '#4CAF50',
           },
         ]}
       >
-        <View style={styles.deleteActionBackground}>
+        <View style={[styles.actionBackground, styles.completeActionBackground]}>
           <Animated.Text
             style={[
-              styles.deleteActionText,
+              styles.actionText,
               {
                 transform: [{ scale }],
               },
             ]}
           >
-            Delete
+            Complete
+          </Animated.Text>
+        </View>
+      </Animated.View>
+    );
+  };
+
+  const renderLeftActions = (progress, dragX, appointmentId) => {
+    const trans = dragX.interpolate({
+      inputRange: [0, 100],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    });
+
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.8, 1],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.swipeAction,
+          {
+            opacity: progress,
+            backgroundColor: theme.colors.error || '#FF5722',
+          },
+        ]}
+      >
+        <View style={[styles.actionBackground, styles.missedActionBackground]}>
+          <Animated.Text
+            style={[
+              styles.actionText,
+              {
+                transform: [{ scale }],
+              },
+            ]}
+          >
+            Missed
           </Animated.Text>
         </View>
       </Animated.View>
@@ -129,25 +208,50 @@ const UpcomingAppointments = ({ navigation }) => {
   };
 
   const renderAppointment = ({ item }) => {
+    let swipeableRef = null;
+
     return (
       <Swipeable
+        ref={ref => swipeableRef = ref}
         renderRightActions={(progress, dragX) =>
           renderRightActions(progress, dragX, item.id)
+        }
+        renderLeftActions={(progress, dragX) =>
+          renderLeftActions(progress, dragX, item.id)
         }
         onSwipeableOpen={(direction) => {
           if (direction === 'right') {
             Alert.alert(
-              "Delete Appointment",
-              "Are you sure you want to delete this appointment?",
+              "Complete Appointment",
+              "Are you sure you want to mark this appointment as completed?",
               [
                 {
                   text: "Cancel",
                   style: "cancel",
+                  onPress: () => swipeableRef?.close(),
                 },
                 {
-                  text: "Delete",
+                  text: "Complete",
+                  style: "default",
+                  onPress: () => updateAppointmentStatus(item.id, 'Completed'),
+                },
+              ],
+              { cancelable: true }
+            );
+          } else if (direction === 'left') {
+            Alert.alert(
+              "Missed Appointment",
+              "Are you sure you want to mark this appointment as missed?",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                  onPress: () => swipeableRef?.close(),
+                },
+                {
+                  text: "Missed",
                   style: "destructive",
-                  onPress: () => handleDelete(item.id),
+                  onPress: () => updateAppointmentStatus(item.id, 'Missed'),
                 },
               ],
               { cancelable: true }
@@ -155,16 +259,26 @@ const UpcomingAppointments = ({ navigation }) => {
           }
         }}
         rightThreshold={50}
+        leftThreshold={50}
       >
         <View style={styles.appointmentItem}>
           <Text style={styles.appointmentText}>
+            <Text style={styles.appointmentLabel}>Patient Name:</Text> {item.patient.fullName}
+          </Text>
+          <Text style={styles.appointmentText}>
+            <Text style={styles.appointmentLabel}>Contact:</Text> {item.patient.contact}
+          </Text>
+          <Text style={styles.appointmentText}>
+            <Text style={styles.appointmentLabel}>Email:</Text> {item.patient.email}
+          </Text>
+          <Text style={styles.appointmentText}>
+            <Text style={styles.appointmentLabel}>Blood Group:</Text> {item.patient.bloodGroup}
+          </Text>
+          <Text style={styles.appointmentText}>
+            <Text style={styles.appointmentLabel}>Age:</Text> {item.patient.age}
+          </Text>
+          <Text style={styles.appointmentText}>
             <Text style={styles.appointmentLabel}>Hospital:</Text> {item.hospital}
-          </Text>
-          <Text style={styles.appointmentText}>
-            <Text style={styles.appointmentLabel}>Department:</Text> {item.department}
-          </Text>
-          <Text style={styles.appointmentText}>
-            <Text style={styles.appointmentLabel}>Doctor:</Text> {item.doctor}
           </Text>
           <Text style={styles.appointmentText}>
             <Text style={styles.appointmentLabel}>Date:</Text> {item.date}
@@ -180,10 +294,20 @@ const UpcomingAppointments = ({ navigation }) => {
               <Text style={styles.appointmentLabel}>Notes:</Text> {item.notes}
             </Text>
           )}
+          
+          {/* Patient History Button */}
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('ViewHistory', { patientId: item.id })}
+            style={styles.historyButton}
+          >
+            Patient History
+          </Button>
         </View>
       </Swipeable>
     );
   };
+  
 
   if (loading) {
     return (
@@ -211,13 +335,6 @@ const UpcomingAppointments = ({ navigation }) => {
             contentContainerStyle={styles.listContent}
           />
         )}
-        <Button
-          mode="contained"
-          onPress={() => navigation.navigate('BookAppointments')}
-          style={styles.backButtonBottom}
-        >
-          Book New
-        </Button>
       </Background>
     </SafeAreaView>
   );
@@ -258,16 +375,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   appointmentLabel: {
-    fontWeight: 'bold', // Bold style for the label
+    fontWeight: 'bold',
   },
-  deleteAction: {
+  swipeAction: {
     height: '92%',
     width: 100,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 8,
   },
-  deleteActionBackground: {
-    backgroundColor: theme.colors.error || '#ff0000',
+  actionBackground: {
     height: '100%',
     width: '100%',
     justifyContent: 'center',
@@ -279,9 +396,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 5,
   },
-  deleteActionText: {
+  completeActionBackground: {
+    backgroundColor: theme.colors.success || '#4CAF50',
+  },
+  missedActionBackground: {
+    backgroundColor: theme.colors.error || '#FF5722',
+  },
+  actionText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
     textTransform: 'uppercase',
     paddingVertical: 8,
@@ -316,6 +439,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  historyButton: {
+    marginTop: 10,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 20,
+  },
 });
 
-export default UpcomingAppointments;
+export default DocUpcomingAppointments;

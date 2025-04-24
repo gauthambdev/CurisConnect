@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, StyleSheet, Modal, FlatList, TouchableOpacity, ActivityIndicator, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import Background from '../components/Background';
-import Header from '../components/Header';
-import Button from '../components/Button';
-import BackButton from '../components/BackButton';
-import { theme } from '../core/theme';
+import Background from '../../components/Background';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import { theme } from '../../core/theme';
 import * as Notifications from 'expo-notifications';
 import { Calendar } from 'react-native-calendars';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,7 +16,7 @@ const BookAppointments = ({ navigation }) => {
   const [hospitalId, setHospitalId] = useState("");
   const [department, setDepartment] = useState("");
   const [doctor, setDoctor] = useState("");
-  const [doctorId, setDoctorId] = useState(""); // New state for doctor's document ID
+  const [docId, setdocId] = useState(""); // New state for doctor's document ID
   const [date, setDate] = useState(null);
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
@@ -144,7 +143,7 @@ const BookAppointments = ({ navigation }) => {
       if (!hospitalId || !department) {
         setDoctors([]);
         setDoctor("");
-        setDoctorId(""); // Reset doctorId when doctors list changes
+        setdocId(""); // Reset docId when doctors list changes
         return;
       }
 
@@ -163,7 +162,7 @@ const BookAppointments = ({ navigation }) => {
         }));
         setDoctors(doctorList);
         setDoctor(""); // Reset doctor selection
-        setDoctorId(""); // Reset doctorId
+        setdocId(""); // Reset docId
       } catch (err) {
         console.error("Error fetching doctors:", err);
         setError("Failed to load doctors: " + err.message);
@@ -243,7 +242,7 @@ const BookAppointments = ({ navigation }) => {
   };
 
   const handleBooking = async () => {
-    if (!hospitalId || !department || !doctor || !doctorId || !date || !time) {
+    if (!hospitalId || !department || !doctor || !docId || !date || !time) {
       setError("Please fill in all required fields: Hospital, Department, Doctor, Date, and Time.");
       return;
     }
@@ -267,7 +266,7 @@ const BookAppointments = ({ navigation }) => {
         hospitalName: hospital,
         department,
         doctor,
-        doctorId, // Add doctorId to appointment data
+        docId, // Add docId to appointment data
         date,
         time,
         notes: notes || "",
@@ -299,7 +298,7 @@ const BookAppointments = ({ navigation }) => {
         setHospitalId(item.id);
         setDepartment("");
         setDoctor("");
-        setDoctorId(""); // Reset doctorId when hospital changes
+        setdocId(""); // Reset docId when hospital changes
         setHospitalModalVisible(false);
       }}
     >
@@ -313,7 +312,7 @@ const BookAppointments = ({ navigation }) => {
       onPress={() => {
         setDepartment(item);
         setDoctor("");
-        setDoctorId(""); // Reset doctorId when department changes
+        setdocId(""); // Reset docId when department changes
         setDepartmentModalVisible(false);
       }}
     >
@@ -326,7 +325,7 @@ const BookAppointments = ({ navigation }) => {
       style={styles.modalItem}
       onPress={() => {
         setDoctor(item.name); // Set the doctor's name
-        setDoctorId(item.id); // Set the doctor's document ID
+        setdocId(item.id); // Set the doctor's document ID
         setDoctorModalVisible(false);
       }}
     >

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Text, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import Background from '../components/Background';
-import Header from '../components/Header';
-import Button from '../components/Button';
-import DashboardCard from '../components/DashboardCard';
-import { theme } from '../core/theme';
+import Background from '../../components/Background';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import DashboardCard from '../../components/DashboardCard';
+import { theme } from '../../core/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const PatientDashboard = ({ navigation }) => {
@@ -151,7 +151,7 @@ const PatientDashboard = ({ navigation }) => {
             onPress={() => navigation.navigate('UpcomingAppointments')}
           >
             <ImageBackground
-              source={require('../assets/hospital.webp')}
+              source={require('../../assets/hospital.webp')}
               style={styles.imageBackground}
               imageStyle={styles.imageStyle}
             >
@@ -187,9 +187,15 @@ const PatientDashboard = ({ navigation }) => {
           <View style={styles.cardGrid}>
             <DashboardCard
               icon="calendar"
-              title="Appointments"
-              subtitle="View all appointments"
+              title="New Appointments"
+              subtitle="View all upcoming appointments"
               onPress={() => navigation.navigate('UpcomingAppointments')}
+            />
+            <DashboardCard
+              icon="calendar"
+              title="Past Appointments"
+              subtitle="View all past appointments"
+              onPress={() => navigation.navigate('PastAppointments')}
             />
             <DashboardCard
               icon="plus"
@@ -208,6 +214,24 @@ const PatientDashboard = ({ navigation }) => {
               title="Medical Files"
               subtitle="Manage medical files"
               onPress={() => navigation.navigate('UploadDocScreen')}
+            />
+            <DashboardCard
+              icon="message-text"
+              title="Give Feedback"
+              subtitle="Give doctor feedback"
+              onPress={() => navigation.navigate('Feedback')}
+            />
+            <DashboardCard
+              icon="pill"
+              title="Pharmacies"
+              subtitle="View Nearby Pharmacies"
+              onPress={() => navigation.navigate('Pharmacies')}
+            />
+            <DashboardCard
+              icon="hospital"
+              title="Hospitals"
+              subtitle="View Nearby Hospitals"
+              onPress={() => navigation.navigate('Hospitals')}
             />
           </View>
         </ScrollView>

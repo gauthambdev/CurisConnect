@@ -7,7 +7,6 @@ import Logo from '../components/Logo';
 import Header from '../components/Header';
 import Button from '../components/Button';
 import TextInput from '../components/TextInput';
-import BackButton from '../components/BackButton';
 import { Text } from 'react-native-paper';
 import { db, auth } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore"; // Firestore imports

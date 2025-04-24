@@ -3,9 +3,11 @@ import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage'; // Add this import
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { getFunctions } from 'firebase/functions';
+
 
 const firebaseConfig = {
-  apiKey: "",
+  apiKey: "AIzaSyC5HLMMVOoQRLZylRJJ3bKGWAak-gsC6EM",
   authDomain: "curis-fffdc.firebaseapp.com",
   projectId: "curis-fffdc",
   storageBucket: "curis-fffdc.firebasestorage.app",
@@ -26,4 +28,6 @@ const auth = initializeAuth(app, {
 // Initialize Storage
 const storage = getStorage(app);
 
-export { db, auth, storage }; // Export storage along with db and auth
+const functions = getFunctions(app);
+
+export { functions, db, auth, storage }; // Export storage along with db and auth

@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { View, Text, TextInput, ActivityIndicator, ScrollView, StyleSheet, Dimensions } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Background from '../components/Background';
-import Header from '../components/Header';
-import Button from '../components/Button';
-import { theme } from '../core/theme';
+import Background from '../../components/Background';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import { theme } from '../../core/theme';
 
 // Get screen width to constrain elements
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -18,7 +18,7 @@ const QuickDiagnosis = ({ navigation }) => {
   const [error, setError] = useState(null);
 
   // Replace with your Gemini API key (store securely in production, e.g., environment variables)
-  const GEMINI_API_KEY = ""; // Obtain from Google AI Studio
+  const GEMINI_API_KEY = "AIzaSyBLVW6kDs3esuNNc5Ri09gmu2FRuGdyJvg"; // Obtain from Google AI Studio
   const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
   const handleDiagnosis = async () => {

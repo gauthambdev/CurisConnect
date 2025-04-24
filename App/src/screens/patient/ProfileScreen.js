@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Image, TouchableOpacity, Text, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import Background from '../components/Background';
-import Header from '../components/Header';
-import Button from '../components/Button';
-import TextInput from '../components/TextInput';
-import { theme } from '../core/theme';
+import Background from '../../components/Background';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import TextInput from '../../components/TextInput';
+import { theme } from '../../core/theme';
 
 const ProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState({ value: '', error: '' });
@@ -20,7 +20,7 @@ const ProfileScreen = ({ navigation }) => {
   const [address, setAddress] = useState({ value: '', error: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [profileImageURL, setProfileImageURL] = useState(null);
-  const defaultImage = require('../assets/icon.png');
+  const defaultImage = require('../../assets/icon.png');
 
   useEffect(() => {
     const fetchUserData = async () => {
