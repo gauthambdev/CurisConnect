@@ -24,6 +24,7 @@ import {
   getDocs,
   doc,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import {
@@ -32,6 +33,7 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import Background from '../../components/Background';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -42,6 +44,7 @@ export default function DocUploadDocScreen({ navigation }) {
   const [images, setImages] = useState([]);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [patientModalVisible, setPatientModalVisible] = useState(false);
@@ -155,6 +158,32 @@ export default function DocUploadDocScreen({ navigation }) {
     }
   };
 
+  const processDocumentWithVision = async (pdfUrl, docId) => {
+    try {
+      setProcessingStatus('Extracting text from PDF...');
+
+      // Call the Cloud Function to process the PDF
+      const functions = getFunctions();
+      const extractTextFromPdf = httpsCallable(functions, 'extract1');
+
+      console.log('Sending PDF URL to function:', pdfUrl);
+
+      const result = await extractTextFromPdf({ pdfUrl: pdfUrl });
+
+      // Update the Firestore document with the extracted text
+      await updateDoc(doc(db, 'uploads', docId), {
+        extractedText: result.data.text,
+      });
+
+      setProcessingStatus('Text extraction complete');
+      return result.data;
+    } catch (error) {
+      console.error('Error processing document with Vision API:', error);
+      setProcessingStatus('Error extracting text');
+      throw error;
+    }
+  };
+
   const handleUpload = async () => {
     if (images.length === 0) {
       alert('Please take at least one picture');
@@ -172,6 +201,7 @@ export default function DocUploadDocScreen({ navigation }) {
     }
 
     setLoading(true);
+    setProcessingStatus('Creating PDF...');
     try {
       const pdfUri = await createPDF();
 
@@ -188,26 +218,37 @@ export default function DocUploadDocScreen({ navigation }) {
           const progress =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log(`Upload is ${progress}% done`);
+          setProcessingStatus(`Uploading: ${Math.round(progress)}%`);
         },
         error => {
           console.error('Upload failed:', error);
           alert('Error uploading document');
           setLoading(false);
+          setProcessingStatus('');
         },
         async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          await storeInFirebase(downloadURL);
-          alert('Document uploaded successfully!');
-          setImages([]);
-          setFileName('');
-          setSelectedPatientId('');
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            const docId = await storeInFirebase(downloadURL);
+            await processDocumentWithVision(downloadURL, docId);
+            alert('Document uploaded and processed successfully!');
+            setImages([]);
+            setFileName('');
+            setSelectedPatientId('');
+          } catch (error) {
+            console.error('Processing error:', error);
+            alert('Document was uploaded but there was an error processing the text');
+          } finally {
+            setLoading(false);
+            setProcessingStatus('');
+          }
         }
       );
     } catch (error) {
       console.error('Upload error:', error);
       alert('Error uploading document');
-    } finally {
       setLoading(false);
+      setProcessingStatus('');
     }
   };
 
@@ -335,6 +376,10 @@ export default function DocUploadDocScreen({ navigation }) {
             {loading ? 'Processing...' : 'Create and Upload PDF'}
           </Button>
         )}
+
+        {processingStatus ? (
+          <Text style={styles.statusText}>{processingStatus}</Text>
+        ) : null}
       </ScrollView>
 
       <Modal
@@ -380,13 +425,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: 'bold',
     textAlign: 'center',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 10,
-    marginTop: 20,
   },
   scrollContent: {
     flexGrow: 1,
@@ -475,5 +513,11 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginVertical: 20,
+  },
+  statusText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: theme.colors.secondary,
+    fontStyle: 'italic',
   },
 });

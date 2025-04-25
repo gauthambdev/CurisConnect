@@ -88,14 +88,14 @@ export default function UploadDocScreen({ navigation }) {
       // Call the Cloud Function to process the PDF
       const functions = getFunctions();
       const extractTextFromPdf = httpsCallable(functions, 'extract1');
+
+      console.log('Sending PDF URL to function:', pdfUrl);
       
-      const result = await extractTextFromPdf({ pdfUrl });
-      console.log('Text extraction result:', result.data);
+      const result = await extractTextFromPdf({pdfUrl: pdfUrl});
       
       // Update the Firestore document with the extracted text
       await updateDoc(doc(db, 'uploads', docId), {
         extractedText: result.data.text,
-        processedAt: serverTimestamp()
       });
       
       setProcessingStatus('Text extraction complete');

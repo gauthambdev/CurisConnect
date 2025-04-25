@@ -18,6 +18,7 @@ export { default as PastAppointments } from './patient/PastAppointments';
 export { default as Feedback} from './patient/Feedback';
 export { default as Pharmacies} from './patient/Pharmacies';
 export { default as Hospitals} from './patient/Hospitals';
+export { default as SummaryScreen} from './patient/SummaryScreen';
 
 // doctor
 export { default as DocUpcomingAppointments } from './doctor/DocUpcomingAppointments';
@@ -28,6 +29,7 @@ export { default as DocUploadDocScreen} from './doctor/DocUploadDocScreen';
 export { default as DocProfileScreen} from './doctor/DocProfileScreen';
 export { default as DocPastAppointments } from './doctor/DocPastAppointments';
 export { default as DocFeedback } from './doctor/DocFeedback';
+export { default as ViewHistory} from './doctor/ViewHistory';
 
 //admin
 export { default as AddAdmin} from './admin/AddAdmin';

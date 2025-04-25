@@ -44,6 +44,11 @@ const MedicalHistory = ({ navigation }) => {
     WebBrowser.openBrowserAsync(url);
   };
 
+  const handleSummary = (extractedText, timestamp) => {
+    const dateString = new Date(timestamp.toDate()).toLocaleDateString();
+    navigation.navigate('SummaryScreen', { extractedText, date: dateString });
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -59,120 +64,133 @@ const MedicalHistory = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Background>
-        <Header style={styles.header}>Medical History</Header>
-        <View style={styles.tableWrapper}>
-          <DataTable>
-            <DataTable.Header>
-              <DataTable.Title>Filename</DataTable.Title>
-              <DataTable.Title>      Date</DataTable.Title>
-              <DataTable.Title>        Action</DataTable.Title>
-            </DataTable.Header>
-          </DataTable>
-          <ScrollView style={styles.tableContainer}>
-            <DataTable>
-              {documents.length === 0 ? (
-                <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>No documents found in your medical history.</Text>
-                </View>
-              ) : (
-                documents.map(doc => (
-                  <DataTable.Row key={doc.id}>
-                    <DataTable.Cell>{doc.filename}</DataTable.Cell>
-                    <DataTable.Cell>{new Date(doc.timestamp.toDate()).toLocaleDateString()}</DataTable.Cell>
-                    <DataTable.Cell>
-                      <Button
-                        mode="contained"
-                        onPress={() => openPDF(doc.url)}
-                        style={styles.actionButton}
-                        labelStyle={styles.buttonLabel}
-                      >
-                        open
-                      </Button>
-                    </DataTable.Cell>
-                  </DataTable.Row>
-                ))
-              )}
-            </DataTable>
-          </ScrollView>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={() => navigation.navigate('UploadDocScreen')}
-            style={styles.uploadButton}
-          >
-            Upload New Document
-          </Button>
+      <SafeAreaView style={styles.safeArea}>
+        <Background>
+          <Header style={styles.header}>Medical History</Header>
   
-        </View>
-      </Background>
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20,
-    fontSize: 27,
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: '100%',
-  },
-  tableWrapper: {
-    flex: 1,
-    width: '100%',
-    paddingHorizontal: 0,
-  },
-  tableContainer: {
-    flex: 1,
-    maxHeight: 480, // Controls scrollable table height
-  },
-  noDataContainer: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 200,
-    width: '100%',
-  },
-  noDataText: {
-    color: "#6b7280",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    width: '100%',
-  },
-  uploadButton: {
-    marginBottom: 10,
-    width: '100%',
-    backgroundColor: theme.colors.primary,
-  },
-  actionButton: {
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    backgroundColor: theme.colors.primary,
-    minWidth: 50,
-  },
-  buttonLabel: {
-    color: theme.colors.surface,
-    fontSize: 14,
-  },
-});
+          {/* Horizontal scroll just for the table */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.tableWrapper}>
+              <DataTable>
+                <DataTable.Header>
+                  <DataTable.Title>Filename</DataTable.Title>
+                  <DataTable.Title>Date</DataTable.Title>
+                  <DataTable.Title>Open</DataTable.Title>
+                  <DataTable.Title>Summary</DataTable.Title>
+                </DataTable.Header>
+              </DataTable>
+  
+              <ScrollView style={styles.tableContainer}>
+                <DataTable>
+                  {documents.length === 0 ? (
+                    <View style={styles.noDataContainer}>
+                      <Text style={styles.noDataText}>No documents found in your medical history.</Text>
+                    </View>
+                  ) : (
+                    documents.map(doc => (
+                      <DataTable.Row key={doc.id}>
+                        <DataTable.Cell>{doc.filename}</DataTable.Cell>
+                        <DataTable.Cell>{new Date(doc.timestamp.toDate()).toLocaleDateString()}</DataTable.Cell>
+                        <DataTable.Cell>
+                          <Button
+                            mode="contained"
+                            onPress={() => openPDF(doc.url)}
+                            style={styles.actionButton}
+                            labelStyle={styles.buttonLabel}
+                          >
+                            view
+                          </Button>
+                        </DataTable.Cell>
+                        <DataTable.Cell>
+                          <Button
+                            mode="contained"
+                            onPress={() => handleSummary(doc.extractedText, doc.timestamp)}
+                            style={styles.actionButton}
+                            labelStyle={styles.buttonLabel}
+                          >
+                            view
+                          </Button>
+                        </DataTable.Cell>
+                      </DataTable.Row>
+                    ))
+                  )}
+                </DataTable>
+              </ScrollView>
+            </View>
+          </ScrollView>
+  
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate('UploadDocScreen')}
+              style={styles.uploadButton}
+            >
+              Upload New Document
+            </Button>
+          </View>
+        </Background>
+      </SafeAreaView>
+    );
+  };
+  
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: "#fff",
+    },
+    header: {
+      marginTop: 20,
+      marginBottom: 20,
+      fontSize: 27,
+      color: theme.colors.primary,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      width: '100%',
+    },
+    tableWrapper: {
+      width: Dimensions.get('window').width * 1.2,
+      paddingHorizontal: 10,
+    },
+    tableContainer: {
+      maxHeight: 480,
+    },
+    noDataContainer: {
+      padding: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      height: 200,
+      width: '100%',
+    },
+    noDataText: {
+      color: "#6b7280",
+      fontSize: 16,
+      textAlign: "center",
+    },
+    buttonContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      width: '100%',
+    },
+    uploadButton: {
+      marginBottom: 10,
+      width: '100%',
+      backgroundColor: theme.colors.primary,
+    },
+    actionButton: {
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      backgroundColor: theme.colors.primary,
+      minWidth: 50,
+    },
+    buttonLabel: {
+      color: theme.colors.surface,
+      fontSize: 14,
+    },
+  });
 
 export default MedicalHistory;

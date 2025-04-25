@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Background from '../../components/Background';
 import Header from '../../components/Header';
 import DashboardCard from '../../components/DashboardCard';
 import { theme } from '../../core/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 const DoctorDashboard = ({ navigation }) => {
   const [userName, setUserName] = useState('');
+  const [weeklyAppointments, setWeeklyAppointments] = useState([]);
 
   useEffect(() => {
     const fetchDoctorData = async () => {
@@ -33,8 +36,74 @@ const DoctorDashboard = ({ navigation }) => {
       }
     };
 
+    const fetchAppointments = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // Query all appointments for the doctor
+        const q = query(
+          collection(db, 'appointments'),
+          where('docId', '==', user.uid)
+        );
+        const querySnapshot = await getDocs(q);
+
+        // Get current week's Monday–Sunday range
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        monday.setHours(0, 0, 0, 0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
+        // Initialize counts for each day (Mon–Sun)
+        const counts = Array(7).fill(0);
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        // Count appointments per day
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const dateStr = data.date;
+          if (dateStr) {
+            const apptDate = new Date(dateStr);
+            if (apptDate >= monday && apptDate <= sunday) {
+              const dayIndex = Math.floor((apptDate - monday) / (1000 * 60 * 60 * 24));
+              if (dayIndex >= 0 && dayIndex < 7) {
+                counts[dayIndex]++;
+              }
+            }
+          }
+        });
+
+        // Prepare data for graph
+        const maxCount = Math.max(...counts, 1); // Avoid division by 0
+        const graphData = days.map((day, index) => ({
+          day,
+          count: counts[index],
+          height: (counts[index] / maxCount) * 100, // Normalized height (0–100)
+        }));
+
+        setWeeklyAppointments(graphData);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      }
+    };
+
     fetchDoctorData();
+    fetchAppointments();
   }, []);
+
+  const renderBar = ({ day, count, height }) => {
+    return (
+      <View key={day} style={styles.barContainer}>
+        <Text style={styles.barCount}>{count}</Text>
+        <View style={[styles.bar, { height: height || 10 }]} />
+        <Text style={styles.barLabel}>{day}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -45,15 +114,18 @@ const DoctorDashboard = ({ navigation }) => {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-          {/* Appointments Graph Placeholder */}
-          <TouchableOpacity
-            style={styles.graphCard}
-          >
+          {/* Appointments Graph */}
+          <TouchableOpacity style={styles.graphCard}>
             <View style={styles.graphCardContent}>
               <Text style={styles.graphTitle}>This Week's Appointments</Text>
-              
-              <View style={styles.graphPlaceholder}>
-                <Text style={{ color: '#aaa' }}>[Graph]</Text>
+              <View style={styles.graphContainer}>
+                {weeklyAppointments.length > 0 ? (
+                  <View style={styles.barChart}>
+                    {weeklyAppointments.map(renderBar)}
+                  </View>
+                ) : (
+                  <Text style={styles.noDataText}>No appointments this week</Text>
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -144,20 +216,44 @@ const styles = StyleSheet.create({
   graphTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  graphSubtitle: {
-    fontSize: 14,
-    color: '#666',
     marginBottom: 10,
   },
-  graphPlaceholder: {
-    height: 100,
-    backgroundColor: '#ddd',
-    borderRadius: 10,
+  graphContainer: {
     width: '100%',
+    height: 150,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  barChart: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    width: '90%',
+    height: 120,
+  },
+  barContainer: {
+    alignItems: 'center',
+    width: SCREEN_WIDTH / 10,
+  },
+  bar: {
+    width: 20,
+    backgroundColor: theme.colors.primary || '#800080',
+    borderRadius: 4,
+    minHeight: 10,
+  },
+  barCount: {
+    fontSize: 12,
+    color: theme.colors.text || '#000',
+    marginBottom: 5,
+  },
+  barLabel: {
+    fontSize: 12,
+    color: theme.colors.text || '#000',
+    marginTop: 5,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
   },
   cardGrid: {
     flexDirection: 'row',

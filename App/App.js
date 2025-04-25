@@ -34,6 +34,7 @@ const AppNavigator = () => (
     <Stack.Screen name="Feedback" component={screens.Feedback} />
     <Stack.Screen name="Pharmacies" component={screens.Pharmacies} />
     <Stack.Screen name="Hospitals" component={screens.Hospitals} />
+    <Stack.Screen name="SummaryScreen" component={screens.SummaryScreen} />
 
     <Stack.Screen name="ViewPatients" component={screens.ViewPatients} />
     <Stack.Screen name="DocDiagnoses" component={screens.DocDiagnoses} />
@@ -43,6 +44,7 @@ const AppNavigator = () => (
     <Stack.Screen name="DocPastAppointments" component={screens.DocPastAppointments} />
     <Stack.Screen name="DocUpcomingAppointments" component={screens.DocUpcomingAppointments} />
     <Stack.Screen name="DocFeedback" component={screens.DocFeedback} />
+    <Stack.Screen name="ViewHistory" component={screens.ViewHistory} />
 
     <Stack.Screen name="AddAdmin" component={screens.AddAdmin} />
     <Stack.Screen name="AddUser" component={screens.AddUser} />

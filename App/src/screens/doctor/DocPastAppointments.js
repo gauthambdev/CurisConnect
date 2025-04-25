@@ -22,37 +22,37 @@ const DocPastAppointments = ({ navigation }) => {
           setLoading(false);
           return;
         }
-  
+
         // Query for appointments that are NOT pending (completed or missed)
         const q = query(
           collection(db, 'appointments'),
           where('docId', '==', user.uid),
           where('status', 'in', ['Completed', 'Missed'])
         );
-  
+
         const querySnapshot = await getDocs(q);
         let appointmentsList = [];
-  
+
         for (const appointmentDoc of querySnapshot.docs) {
           const data = appointmentDoc.data();
           const patientId = data.userId;
-  
+
           const patientRef = doc(db, 'patients', patientId);
           const patientSnap = await getDoc(patientRef);
           const patientData = patientSnap.exists() ? patientSnap.data() : null;
-  
+
           let fullName = 'Unknown';
           let contact = 'N/A';
           let email = 'N/A';
           let bloodGroup = 'N/A';
           let age = 'N/A';
-  
+
           if (patientData) {
             fullName = `${patientData.firstName} ${patientData.lastName}`;
             contact = patientData.contact || 'N/A';
             email = patientData.email || 'N/A';
             bloodGroup = patientData.bloodGroup || 'N/A';
-  
+
             const dob = patientData.dob;
             if (dob) {
               const birthDate = new Date(dob);
@@ -65,9 +65,10 @@ const DocPastAppointments = ({ navigation }) => {
               age = calculatedAge;
             }
           }
-  
+
           appointmentsList.push({
             id: appointmentDoc.id,
+            patientId, // Add patientId to the appointment object
             hospital: data.hospitalName || 'N/A',
             date: data.date || 'N/A',
             time: data.time || 'N/A',
@@ -82,12 +83,12 @@ const DocPastAppointments = ({ navigation }) => {
             }
           });
         }
-  
+
         // Sort appointments by date and time (most recent first)
         appointmentsList.sort((a, b) => {
           const dateA = a.date !== 'N/A' ? new Date(a.date) : new Date(0);
           const dateB = b.date !== 'N/A' ? new Date(b.date) : new Date(0);
-  
+
           const parseTime = (time) => {
             if (time === 'N/A') return 0;
             const [timePart, period] = time.split(' ');
@@ -96,14 +97,14 @@ const DocPastAppointments = ({ navigation }) => {
             if (period === 'AM' && hours === 12) hours = 0;
             return hours * 60 + minutes;
           };
-  
+
           const timeA = parseTime(a.time);
           const timeB = parseTime(b.time);
-          
+
           // Reverse the order to show most recent first
           return (dateB.getTime() + timeB * 60 * 1000) - (dateA.getTime() + timeA * 60 * 1000);
         });
-  
+
         setAppointments(appointmentsList);
       } catch (error) {
         console.error('Error fetching appointments:', error.message);
@@ -112,14 +113,14 @@ const DocPastAppointments = ({ navigation }) => {
         setLoading(false);
       }
     };
-  
+
     fetchAppointments();
   }, []);
 
   const renderAppointment = ({ item }) => {
     return (
       <View style={[
-        styles.appointmentItem, 
+        styles.appointmentItem,
         item.status === 'Completed' ? styles.completedAppointment : styles.missedAppointment
       ]}>
         <Text style={styles.appointmentText}>
@@ -147,7 +148,7 @@ const DocPastAppointments = ({ navigation }) => {
           <Text style={styles.appointmentLabel}>Time:</Text> {item.time}
         </Text>
         <Text style={[
-          styles.appointmentText, 
+          styles.appointmentText,
           styles.statusText,
           item.status === 'Completed' ? styles.completedText : styles.missedText
         ]}>
@@ -158,11 +159,11 @@ const DocPastAppointments = ({ navigation }) => {
             <Text style={styles.appointmentLabel}>Notes:</Text> {item.notes}
           </Text>
         )}
-        
+
         {/* Patient History Button */}
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate('ViewHistory', { patientId: item.id })}
+          onPress={() => navigation.navigate('ViewHistory', { patientId: item.patientId })}
           style={styles.historyButton}
         >
           Patient History
@@ -281,10 +282,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: 180,
     borderRadius: 50,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    textAlign: 'center',
   },
   historyButton: {
     marginTop: 10,

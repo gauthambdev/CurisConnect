@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../../firebaseConfig';
-import { collection, query, where, getDocs, getDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { Swipeable } from 'react-native-gesture-handler';
 import Background from '../../components/Background';
 import Header from '../../components/Header';
@@ -23,36 +23,36 @@ const DocUpcomingAppointments = ({ navigation }) => {
           setLoading(false);
           return;
         }
-  
+
         const q = query(
           collection(db, 'appointments'),
           where('docId', '==', user.uid),
           where('status', '==', 'Pending')
         );
-  
+
         const querySnapshot = await getDocs(q);
         let appointmentsList = [];
-  
+
         for (const appointmentDoc of querySnapshot.docs) {
           const data = appointmentDoc.data();
           const patientId = data.userId;
-  
+
           const patientRef = doc(db, 'patients', patientId);
           const patientSnap = await getDoc(patientRef);
           const patientData = patientSnap.exists() ? patientSnap.data() : null;
-  
+
           let fullName = 'Unknown';
           let contact = 'N/A';
           let email = 'N/A';
           let bloodGroup = 'N/A';
           let age = 'N/A';
-  
+
           if (patientData) {
             fullName = `${patientData.firstName} ${patientData.lastName}`;
             contact = patientData.contact || 'N/A';
             email = patientData.email || 'N/A';
             bloodGroup = patientData.bloodGroup || 'N/A';
-  
+
             const dob = patientData.dob;
             if (dob) {
               const birthDate = new Date(dob);
@@ -65,9 +65,10 @@ const DocUpcomingAppointments = ({ navigation }) => {
               age = calculatedAge;
             }
           }
-  
+
           appointmentsList.push({
             id: appointmentDoc.id,
+            patientId, // Add patientId to the appointment object
             hospital: data.hospitalName || 'N/A',
             date: data.date || 'N/A',
             time: data.time || 'N/A',
@@ -82,12 +83,12 @@ const DocUpcomingAppointments = ({ navigation }) => {
             }
           });
         }
-  
+
         // Sort appointments by date and time
         appointmentsList.sort((a, b) => {
           const dateA = a.date !== 'N/A' ? new Date(a.date) : new Date(0);
           const dateB = b.date !== 'N/A' ? new Date(b.date) : new Date(0);
-  
+
           const parseTime = (time) => {
             if (time === 'N/A') return 0;
             const [timePart, period] = time.split(' ');
@@ -96,12 +97,12 @@ const DocUpcomingAppointments = ({ navigation }) => {
             if (period === 'AM' && hours === 12) hours = 0;
             return hours * 60 + minutes;
           };
-  
+
           const timeA = parseTime(a.time);
           const timeB = parseTime(b.time);
           return dateA.getTime() + timeA * 60 * 1000 - (dateB.getTime() + timeB * 60 * 1000);
         });
-  
+
         setAppointments(appointmentsList);
       } catch (error) {
         console.error('Error fetching appointments:', error.message);
@@ -110,17 +111,17 @@ const DocUpcomingAppointments = ({ navigation }) => {
         setLoading(false);
       }
     };
-  
+
     fetchAppointments();
   }, []);
-  
+
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
       const appointmentRef = doc(db, 'appointments', appointmentId);
       await updateDoc(appointmentRef, {
         status: newStatus
       });
-      
+
       // Update the local state to reflect the change
       setAppointments(appointments.filter(appointment => appointment.id !== appointmentId));
     } catch (error) {
@@ -294,11 +295,11 @@ const DocUpcomingAppointments = ({ navigation }) => {
               <Text style={styles.appointmentLabel}>Notes:</Text> {item.notes}
             </Text>
           )}
-          
+
           {/* Patient History Button */}
           <Button
             mode="outlined"
-            onPress={() => navigation.navigate('ViewHistory', { patientId: item.id })}
+            onPress={() => navigation.navigate('ViewHistory', { patientId: item.patientId })}
             style={styles.historyButton}
           >
             Patient History
@@ -307,7 +308,6 @@ const DocUpcomingAppointments = ({ navigation }) => {
       </Swipeable>
     );
   };
-  
 
   if (loading) {
     return (
@@ -426,18 +426,6 @@ const styles = StyleSheet.create({
     color: theme.colors.error || '#ff0000',
     textAlign: 'center',
     marginTop: 20,
-  },
-  backButtonBottom: {
-    marginTop: 20,
-    marginBottom: 40,
-    paddingVertical: 10,
-    alignSelf: 'center',
-    width: 180,
-    borderRadius: 50,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    textAlign: 'center',
   },
   historyButton: {
     marginTop: 10,
