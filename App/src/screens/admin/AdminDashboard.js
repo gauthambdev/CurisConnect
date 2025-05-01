@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, TextInput, StatusBar, Dimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, TextInput, StatusBar, Dimensions, Alert, Animated } from 'react-native';
 import { SafeAreaView, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
@@ -8,9 +8,17 @@ import Header from '../../components/Header';
 import DashboardCard from '../../components/DashboardCard';
 import { theme } from '../../core/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Get screen width for dynamic sizing
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const OVERVIEW_METRICS = [
+  { icon: 'account-group', label: 'Patients', key: 'totalPatients' },
+  { icon: 'doctor', label: 'Doctors', key: 'totalDoctors' },
+  { icon: 'calendar', label: 'Appointments', key: 'totalAppointments' },
+  { icon: 'file-document', label: 'Files Uploaded', key: 'totalFiles' },
+];
 
 const AdminDashboard = ({ navigation }) => {
   const insets = useSafeAreaInsets(); // Get safe area insets
@@ -18,19 +26,11 @@ const AdminDashboard = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [analyticsData, setAnalyticsData] = useState({
     totalPatients: 0,
-    activePatients: 0,
     totalDoctors: 0,
-    activeDoctors: 0,
-    totalNurses: 0,
-    activeNurses: 0,
-    totalHospitals: 0,
-    totalBeds: 0,
-    occupiedBeds: 0,
     totalAppointments: 0,
-    completedAppointments: 0,
-    avgAppointmentsPerPatient: 0,
-    totalUploads: 0,
-    appointmentTrends: [],
+    totalFiles: 0,
+    activePatients: 0,
+    activeDoctors: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,21 +38,16 @@ const AdminDashboard = ({ navigation }) => {
   const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
 
   const dashboardItems = [
-    { icon: 'hospital', title: 'Hospitals', subtitle: 'View hospitals & doctors', screen: 'ViewHospitals' },
     { icon: 'account-group', title: 'Patients', subtitle: 'View all patients', screen: 'ViewPatients' },
     { icon: 'doctor', title: 'Add Doctor', subtitle: 'Register new doctors', screen: 'AddDoctor' },
     { icon: 'hospital-building', title: 'Add Hospital', subtitle: 'Register new hospitals', screen: 'AddHospital' },
+    { icon: 'hospital-building', title: 'View Hospitals', subtitle: 'View all registered hospitals', screen: 'ViewHospitals' },
     { icon: 'account-plus', title: 'Add Admin', subtitle: 'Register new admins', screen: 'AddAdmin' },
-    { icon: 'account-edit', title: 'Manage Admins', subtitle: 'View & edit admins', screen: 'ManageAdmins' },
   ];
 
   const metricsData = [
     { icon: 'account-group', number: analyticsData.totalPatients, label: 'Patients' },
     { icon: 'doctor', number: analyticsData.totalDoctors, label: 'Doctors' },
-    { icon: 'hospital', number: analyticsData.totalHospitals, label: 'Hospitals' },
-    { icon: 'calendar', number: analyticsData.totalAppointments, label: 'Appts' },
-    { icon: 'medical-bag', number: analyticsData.totalNurses, label: 'Nurses' },
-    { icon: 'file-upload', number: analyticsData.totalUploads, label: 'Uploads' },
   ];
 
   const filteredItems = dashboardItems.filter(item =>
@@ -64,107 +59,78 @@ const AdminDashboard = ({ navigation }) => {
       try {
         const user = auth.currentUser;
         if (user) {
+          console.log('Admin UID:', user.uid); // Debug
           const adminDocRef = doc(db, 'admins', user.uid);
           const adminDoc = await getDoc(adminDocRef);
           if (adminDoc.exists()) {
             const adminData = adminDoc.data();
-            const fullName = `${adminData.firstName || 'Unknown'} ${adminData.lastName || 'Admin'}`.trim();
-            setAdminName(fullName);
+            const fullName = `${adminData.firstName || ''} ${adminData.lastName || ''}`.trim();
+            setAdminName(fullName || adminData.email || 'Admin');
           } else {
-            setAdminName('Unknown Admin');
+            setAdminName('Profile Incomplete');
+            Alert.alert('Profile Incomplete', 'Please complete your admin profile in the Profile tab.');
           }
         } else {
           setAdminName('Guest Admin');
         }
       } catch (error) {
         console.error('Error fetching admin data:', error);
-        setAdminName('Guest Admin');
+        setAdminName('Error loading profile');
       }
     };
 
-    const fetchAnalyticsData = () => {
+    const fetchAnalyticsData = async () => {
       try {
-        const user = auth.currentUser;
-        if (!user) {
-          setError('No admin logged in. Please log in again.');
-          setLoading(false);
-          return;
-        }
+        // Count patients from 'users' (role: 'patient') and 'patients' collections
+        let totalPatients = 0;
+        let totalDoctors = 0;
+        let totalAppointments = 0;
+        let totalFiles = 0;
 
-        // Patients
-        const patientsUnsubscribe = onSnapshot(collection(db, 'patients'), (snapshot) => {
-          const totalPatients = snapshot.size;
-          const activePatients = snapshot.docs.filter(doc => doc.data().status === 'active').length;
-          setAnalyticsData(prev => ({ ...prev, totalPatients, activePatients }));
+        // Users collection
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        totalPatients += usersSnapshot.docs.filter(doc => doc.data().role === 'patient').length;
+        totalDoctors += usersSnapshot.docs.filter(doc => doc.data().role === 'doctor').length;
+
+        // Patients collection
+        try {
+          const patientsSnapshot = await getDocs(collection(db, 'patients'));
+          totalPatients += patientsSnapshot.size;
+        } catch (e) {}
+
+        // Medicalstaff collection
+        try {
+          const doctorsSnapshot = await getDocs(collection(db, 'medicalstaff'));
+          totalDoctors += doctorsSnapshot.size;
+        } catch (e) {}
+
+        // Appointments collection
+        try {
+          totalAppointments = (await getDocs(collection(db, 'appointments'))).size;
+        } catch (e) {}
+
+        // Files collection
+        try {
+          totalFiles += (await getDocs(collection(db, 'files'))).size;
+        } catch (e) {}
+        // uploadedFiles collection (if exists)
+        try {
+          totalFiles += (await getDocs(collection(db, 'uploadedFiles'))).size;
+        } catch (e) {}
+        // uploads collection (if exists)
+        try {
+          totalFiles += (await getDocs(collection(db, 'uploads'))).size;
+        } catch (e) {}
+
+        setAnalyticsData({
+          totalPatients,
+          totalDoctors,
+          totalAppointments,
+          totalFiles,
         });
-
-        // Medical Staff (Doctors and Nurses)
-        const medicalStaffUnsubscribe = onSnapshot(collection(db, 'medicalstaff'), (snapshot) => {
-          const totalDoctors = snapshot.docs.filter(doc => doc.data().role === 'doctor').length;
-          const activeDoctors = snapshot.docs.filter(doc => doc.data().role === 'doctor' && doc.data().status === 'active').length;
-          const totalNurses = snapshot.docs.filter(doc => doc.data().role === 'nurse').length;
-          const activeNurses = snapshot.docs.filter(doc => doc.data().role === 'nurse' && doc.data().status === 'active').length;
-          setAnalyticsData(prev => ({ ...prev, totalDoctors, activeDoctors, totalNurses, activeNurses }));
-        });
-
-        // Hospitals
-        const hospitalsUnsubscribe = onSnapshot(collection(db, 'hospitals'), (snapshot) => {
-          const totalHospitals = snapshot.size;
-          const totalBeds = snapshot.docs.reduce((sum, doc) => sum + (doc.data().totalBeds || 0), 0);
-          const occupiedBeds = snapshot.docs.reduce((sum, doc) => sum + (doc.data().occupiedBeds || 0), 0);
-          setAnalyticsData(prev => ({ ...prev, totalHospitals, totalBeds, occupiedBeds }));
-        });
-
-        // Appointments
-        const appointmentsUnsubscribe = onSnapshot(collection(db, 'appointments'), (snapshot) => {
-          const totalAppointments = snapshot.size;
-          const completedAppointments = snapshot.docs.filter(doc => doc.data().status === 'completed').length;
-          const avgAppointmentsPerPatient = totalAppointments / Math.max(analyticsData.totalPatients || 1, 1);
-
-          // Fetch appointments from last 30 days
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          const recentAppointments = snapshot.docs.filter(doc => {
-            const appDate = doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date);
-            return appDate >= thirtyDaysAgo;
-          });
-          const appointmentTrends = Array(30).fill(0).map((_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (29 - i));
-            return recentAppointments.filter(doc => {
-              const appDate = doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date);
-              return appDate.toDateString() === date.toDateString();
-            }).length;
-          });
-
-          setAnalyticsData(prev => ({
-            ...prev,
-            totalAppointments,
-            completedAppointments,
-            avgAppointmentsPerPatient,
-            appointmentTrends,
-          }));
-        });
-
-        // Uploads
-        const uploadsUnsubscribe = onSnapshot(collection(db, 'uploads'), (snapshot) => {
-          const totalUploads = snapshot.size;
-          setAnalyticsData(prev => ({ ...prev, totalUploads }));
-        });
-
         setLoading(false);
-
-        // Cleanup subscriptions
-        return () => {
-          patientsUnsubscribe();
-          medicalStaffUnsubscribe();
-          hospitalsUnsubscribe();
-          appointmentsUnsubscribe();
-          uploadsUnsubscribe();
-        };
       } catch (error) {
-        console.error('Error fetching analytics data:', error.message);
-        setError(`Failed to fetch analytics data: ${error.message}`);
+        setError('Failed to load analytics. Please try again later.');
         setLoading(false);
       }
     };
@@ -173,44 +139,32 @@ const AdminDashboard = ({ navigation }) => {
     fetchAnalyticsData();
   }, []);
 
-  // Slideshow effect
+  // Slideshow effect for overview metrics
   useEffect(() => {
     if (loading || !metricsScrollViewRef.current) return;
-
-    const cardWidth = 90 + 12; // Card width + margin right
-    const visibleItems = 3; // Number of items visible at once
-    const totalItems = metricsData.length;
-
+    const cardWidth = 110 + 12; // Card width + margin right
+    const visibleItems = 2; // Number of items visible at once
+    const totalItems = OVERVIEW_METRICS.length;
     const interval = setInterval(() => {
-      // Calculate next index
       let nextIndex = (currentScrollIndex + 1) % (totalItems - visibleItems + 1);
-
-      // If we've reached the end, rapidly scroll back to the beginning
       if (nextIndex === 0 && currentScrollIndex === totalItems - visibleItems) {
         metricsScrollViewRef.current.scrollTo({ x: 0, animated: true });
       } else {
-        // Smoothly scroll to the next card
-        metricsScrollViewRef.current.scrollTo({
-          x: nextIndex * cardWidth,
-          animated: true,
-        });
+        metricsScrollViewRef.current.scrollTo({ x: nextIndex * cardWidth, animated: true });
       }
-
       setCurrentScrollIndex(nextIndex);
-    }, 3000); // Change card every 3 seconds
-
+    }, 3000);
     return () => clearInterval(interval);
-  }, [loading, currentScrollIndex, metricsData.length]);
+  }, [loading, currentScrollIndex]);
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.safeArea, { paddingTop: Math.max(insets.top, 0) }]} edges={['top', 'left', 'right']}>
         <StatusBar barStyle="dark-content" />
+        <View style={styles.headerContainer}>
+          <Header>Hi {adminName} 👋</Header>
+        </View>
         <Background style={[styles.background, { width: '100%' }]}>
-          <View style={[styles.headerContainer, { paddingTop: insets.top, width: '100%' }]}>
-            <Header>Hi {adminName} 👋</Header>
-          </View>
-
           <ScrollView
             contentContainerStyle={[styles.scrollViewContainer, { paddingBottom: insets.bottom + 80 }]}
             showsVerticalScrollIndicator={true}
@@ -224,11 +178,8 @@ const AdminDashboard = ({ navigation }) => {
                 style={[styles.searchInput, { width: '100%' }]}
               />
             </View>
-
-            {/* Slideshow Overview Section */}
             <View style={styles.overviewSection}>
               <Text style={styles.sectionTitle}>Overview</Text>
-
               {loading ? (
                 <Text style={styles.loadingText}>Loading...</Text>
               ) : error ? (
@@ -243,25 +194,23 @@ const AdminDashboard = ({ navigation }) => {
                     scrollEventThrottle={16}
                     onScroll={(event) => {
                       const scrollPosition = event.nativeEvent.contentOffset.x;
-                      const cardWidth = 90 + 12; // width + margin
+                      const cardWidth = 110 + 12;
                       const newIndex = Math.round(scrollPosition / cardWidth);
                       if (newIndex !== currentScrollIndex) {
                         setCurrentScrollIndex(newIndex);
                       }
                     }}
                   >
-                    {metricsData.map((metric, index) => (
+                    {OVERVIEW_METRICS.map((metric, index) => (
                       <View key={index} style={styles.metricCard}>
-                        <Icon name={metric.icon} size={24} color={theme.colors.primary} />
-                        <Text style={styles.metricNumber}>{metric.number}</Text>
+                        <Icon name={metric.icon} size={28} color={theme.colors.primary} />
+                        <Text style={styles.metricNumber}>{analyticsData[metric.key] || 0}</Text>
                         <Text style={styles.metricLabel}>{metric.label}</Text>
                       </View>
                     ))}
                   </ScrollView>
-
-                  {/* Indicator dots */}
                   <View style={styles.indicatorContainer}>
-                    {Array(metricsData.length - 2).fill(0).map((_, index) => (
+                    {Array(OVERVIEW_METRICS.length - 1).fill(0).map((_, index) => (
                       <View
                         key={index}
                         style={[
@@ -274,8 +223,6 @@ const AdminDashboard = ({ navigation }) => {
                 </View>
               )}
             </View>
-
-            {/* Dashboard Cards Section */}
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.cardGrid}>
               {filteredItems.map(({ icon, title, subtitle, screen }, index) => (
@@ -289,21 +236,6 @@ const AdminDashboard = ({ navigation }) => {
               ))}
             </View>
           </ScrollView>
-
-          {/* Bottom Navigation */}
-          <View style={[styles.bottomBar, { paddingBottom: insets.bottom, width: '100%' }]}>
-            <TouchableOpacity style={styles.bottomBarItem}>
-              <Icon name="home" size={24} color={theme.colors.primary} />
-              <Text style={[styles.bottomBarText, { color: theme.colors.primary }]}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomBarItem}
-              onPress={() => navigation.navigate('ProfileScreen')}
-            >
-              <Icon name="account" size={24} color="#666" />
-              <Text style={styles.bottomBarText}>Profile</Text>
-            </TouchableOpacity>
-          </View>
         </Background>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -322,11 +254,12 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    width: '100%', // Full width for header
+    paddingTop: 0,
+    paddingBottom: 0,
+    width: '100%',
   },
   scrollViewContainer: {
     flexGrow: 1,
@@ -371,7 +304,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 90,
+    width: 110,
     height: 90,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -445,6 +378,30 @@ const styles = StyleSheet.create({
     color: '#ff0000',
     textAlign: 'center',
     padding: 10,
+  },
+  analyticsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+  analyticsCard: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '48%',
+  },
+  analyticsNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginVertical: 2,
+  },
+  analyticsLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#333',
   },
 });
 

@@ -96,11 +96,11 @@ const QuickDiagnosis = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Background>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+      <Background style={{ backgroundColor: '#fff' }}>
         <Header style={styles.header}>Quick Diagnosis</Header>
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, { backgroundColor: '#fff' }]}
           contentContainerStyle={styles.content}
           horizontal={false}
           showsHorizontalScrollIndicator={false}
@@ -126,7 +126,7 @@ const QuickDiagnosis = ({ navigation }) => {
             disabled={isProcessing}
             style={styles.button}
           >
-            {isProcessing ? <ActivityIndicator color="#fff" /> : "Get Diagnosis"}
+            {isProcessing ? <ActivityIndicator color="#fff" /> : "Submit"}
           </Button>
 
           {/* Disclaimer */}

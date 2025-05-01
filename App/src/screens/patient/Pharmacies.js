@@ -6,10 +6,12 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // Updated icon library
 
 const GOOGLE_API_KEY = 'AIzaSyAeNBZ8gRT7UZBLLNwPb5peSI8DNzjMKIk'; // Keep this in .env ideally
 
@@ -94,6 +96,12 @@ const Pharmacies = () => {
     );
   };
 
+  const openDirections = (lat, lng) => {
+    if (!location) return;
+    const url = `https://www.google.co.in/maps/dir/?api=1&origin=${location.latitude},${location.longitude}&destination=${lat},${lng}&travelmode=driving`;
+    Linking.openURL(url).catch(err => console.error('Error opening URL:', err));
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       onPress={() =>
@@ -101,11 +109,24 @@ const Pharmacies = () => {
       }
     >
       <View style={styles.item}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.details}>{item.vicinity}</Text>
-        <Text style={styles.distance}>
-          {item.distance.toFixed(2)} km away
-        </Text>
+        <View style={styles.itemContent}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.details}>{item.vicinity}</Text>
+          <Text style={styles.distance}>
+            {item.distance.toFixed(2)} km away
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.directionsButton}
+          onPress={() =>
+            openDirections(
+              item.geometry.location.lat,
+              item.geometry.location.lng
+            )
+          }
+        >
+          <MaterialCommunityIcons name="map-marker-path" size={24} color="#4a148c" />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -185,13 +206,21 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     paddingVertical: 12,
   },
+  itemContent: {
+    flex: 1,
+  },
   name: { fontWeight: 'bold', fontSize: 16, marginBottom: 2 },
   details: { color: '#666', marginBottom: 4 },
   distance: { color: '#6a1b9a', marginTop: 4 },
+  directionsButton: {
+    padding: 8,
+  },
 });
 
 export default Pharmacies;

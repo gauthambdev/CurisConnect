@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, StyleSheet, Modal, FlatList, TouchableOpacity, ActivityIndicator, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../../firebaseConfig';
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import Background from '../../components/Background';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -41,6 +41,7 @@ const BookAppointments = ({ navigation }) => {
     "02:00 PM",
     "03:00 PM",
     "04:00 PM",
+    "05:00 PM",
   ];
 
   // Fetch hospitals and notification preferences on mount
@@ -278,10 +279,78 @@ const BookAppointments = ({ navigation }) => {
       const appointmentRef = doc(db, 'appointments', appointmentId);
       await setDoc(appointmentRef, appointmentData);
 
-      await scheduleNotification(department, new Date(date), time);
+      // Schedule a notification for the appointment
+      await scheduleNotification(department, date, time);
+
+      // Add a notification to Firestore for the notifications page
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: 'Appointment Booked',
+          body: `Your appointment with ${doctor} in ${department} on ${date} at ${time} has been booked.`,
+          userId: user.uid,
+          role: 'patient',
+          read: false,
+          createdAt: serverTimestamp(),
+          data: {
+            appointmentId,
+            hospital,
+            department,
+            doctor,
+            date,
+            time,
+          },
+        });
+        console.log('Firestore notification added!');
+      } catch (e) {
+        console.error('Failed to add Firestore notification:', e);
+        alert('Failed to add Firestore notification: ' + e.message);
+      }
+
+      // Add a notification to Firestore for the doctor
+      let patientName = '';
+      let patientEmail = '';
+      try {
+        // Try to get patient name and email from the user object or Firestore
+        patientName = user.displayName || '';
+        patientEmail = user.email || '';
+        if (!patientName || !patientEmail) {
+          // Fetch from Firestore if not available
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            patientName = data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : patientName;
+            patientEmail = data.email || patientEmail;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch patient info for doctor notification:', e);
+      }
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: 'New Appointment Scheduled',
+          body: `You have a new appointment with ${patientName} (${patientEmail}) in ${department} on ${date} at ${time}.`,
+          userId: docId, // Doctor's user ID
+          role: 'doctor',
+          read: false,
+          createdAt: serverTimestamp(),
+          data: {
+            appointmentId,
+            hospital,
+            department,
+            patient: patientName,
+            patientEmail: patientEmail,
+            date,
+            time,
+          },
+        });
+        console.log('Doctor Firestore notification added!');
+      } catch (e) {
+        console.error('Failed to add Firestore notification for doctor:', e);
+      }
 
       alert(`Appointment booked!\nHospital: ${hospital}\nDepartment: ${department}\nDoctor: ${doctor}\nDate: ${date}\nTime: ${time}`);
-      navigation.navigate('PatientDashboard');
+      navigation.navigate('PatientTabs', { screen: 'Home' });
     } catch (error) {
       console.error("Error booking appointment:", error);
       setError(`Failed to book appointment: ${error.message}`);
@@ -352,7 +421,10 @@ const BookAppointments = ({ navigation }) => {
           <Header style={styles.header}>Book Appointment</Header>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.contentContainer}>
             {/* Date Section */}
             <Text style={styles.label}>Date</Text>
@@ -391,7 +463,7 @@ const BookAppointments = ({ navigation }) => {
               style={styles.dropdown}
               onPress={() => setTimeModalVisible(true)}
             >
-              <Text style={styles.dropdownText}>{time || "Select time"}</Text>
+              <Text style={styles.dropdownText} numberOfLines={1} ellipsizeMode="tail">{time || "Select time"}</Text>
               <Icon name="chevron-down" size={20} color={theme.colors.primary || '#800080'} />
             </TouchableOpacity>
             
@@ -401,7 +473,7 @@ const BookAppointments = ({ navigation }) => {
               style={styles.dropdown}
               onPress={() => setHospitalModalVisible(true)}
             >
-              <Text style={styles.dropdownText}>{hospital || "Select hospital"}</Text>
+              <Text style={styles.dropdownText} numberOfLines={1} ellipsizeMode="tail">{hospital || "Select hospital"}</Text>
               <Icon name="chevron-down" size={20} color={theme.colors.primary || '#800080'} />
             </TouchableOpacity>
             
@@ -412,7 +484,7 @@ const BookAppointments = ({ navigation }) => {
               onPress={() => setDepartmentModalVisible(true)}
               disabled={!hospitalId}
             >
-              <Text style={styles.dropdownText}>{department || "Select department"}</Text>
+              <Text style={styles.dropdownText} numberOfLines={1} ellipsizeMode="tail">{department || "Select department"}</Text>
               <Icon name="chevron-down" size={20} color={theme.colors.primary || '#800080'} />
             </TouchableOpacity>
 
@@ -423,7 +495,7 @@ const BookAppointments = ({ navigation }) => {
               onPress={() => setDoctorModalVisible(true)}
               disabled={!hospitalId || !department}
             >
-              <Text style={styles.dropdownText}>{doctor || "Select doctor"}</Text>
+              <Text style={styles.dropdownText} numberOfLines={1} ellipsizeMode="tail">{doctor || "Select doctor"}</Text>
               <Icon name="chevron-down" size={20} color={theme.colors.primary || '#800080'} />
             </TouchableOpacity>
 
@@ -437,6 +509,8 @@ const BookAppointments = ({ navigation }) => {
               onChangeText={setNotes}
               multiline
               textAlignVertical="top"
+              maxLength={500}
+              numberOfLines={5}
             />
 
             {error && <Text style={styles.error}>{error}</Text>}
@@ -602,7 +676,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   contentContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
   },
   label: {
     fontSize: 16,
@@ -623,6 +700,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
+    minWidth: 300,
+    width: '100%',
+    maxWidth: '100%',
   },
   disabledDropdown: {
     backgroundColor: '#e0e0e0',
@@ -631,16 +711,21 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 16,
     color: '#666',
+    flex: 1,
   },
   notesInput: {
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 15,
-    height: 100,
+    height: 120,
     fontSize: 16,
     color: '#000',
     marginBottom: 20,
     textAlignVertical: 'top',
+    width: '100%',
+    minWidth: 300,
+    maxWidth: '100%',
+    maxLength: 500,
   },
   error: {
     fontSize: 16,

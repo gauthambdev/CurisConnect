@@ -153,7 +153,7 @@ const DocProfileScreen = ({ navigation }) => {
   };
 
   const handleChangePassword = () => {
-    navigation.navigate('ChangePassword');
+    navigation.navigate('ResetPassword');
   };
 
   const handleLogout = async () => {
@@ -161,7 +161,7 @@ const DocProfileScreen = ({ navigation }) => {
       await signOut(auth);
       navigation.reset({
         index: 0,
-        routes: [{ name: 'StartScreen' }],
+        routes: [{ name: 'SplashScreen' }],
       });
     } catch (error) {
       console.error('Error signing out:', error);

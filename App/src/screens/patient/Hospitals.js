@@ -1,8 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
 import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // For the directions icon
 
 const GOOGLE_API_KEY = 'AIzaSyAeNBZ8gRT7UZBLLNwPb5peSI8DNzjMKIk'; // Replace this
 
@@ -86,12 +95,26 @@ const Hospitals = () => {
     );
   };
 
+  const openDirections = (lat, lng) => {
+    if (!location) return;
+    const url = `https://www.google.co.in/maps/dir/?api=1&origin=${location.latitude},${location.longitude}&destination=${lat},${lng}&travelmode=driving`;
+    Linking.openURL(url).catch(err => console.error('Error opening URL:', err));
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity onPress={() => moveToLocation(item.geometry.location.lat, item.geometry.location.lng)}>
       <View style={styles.item}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.details}>{item.vicinity}</Text>
-        <Text style={styles.distance}>{item.distance.toFixed(2)} km away</Text>
+        <View style={styles.itemContent}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.details}>{item.vicinity}</Text>
+          <Text style={styles.distance}>{item.distance.toFixed(2)} km away</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.directionsButton}
+          onPress={() => openDirections(item.geometry.location.lat, item.geometry.location.lng)}
+        >
+          <MaterialCommunityIcons name="map-marker-path" size={24} color="#4a148c" />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -168,13 +191,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomColor: '#ccc',
     borderBottomWidth: 1,
   },
+  itemContent: {
+    flex: 1,
+  },
   name: { fontWeight: 'bold', fontSize: 16 },
   details: { color: 'gray' },
   distance: { color: '#6a1b9a', marginTop: 4 },
+  directionsButton: {
+    padding: 8,
+  },
 });
 
 export default Hospitals;

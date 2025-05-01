@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator, Dimensions, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
@@ -8,14 +8,16 @@ import Header from '../../components/Header';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { theme } from '../../core/theme';
 
-// Get screen width for dynamic sizing
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const AddHospital = ({ navigation }) => {
   const [formData, setFormData] = useState({
     hospitalId: '',
     name: '',
-    address: '',
+    state: '',
+    city: '',
+    street: '',
+    contact: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,6 @@ const AddHospital = ({ navigation }) => {
     const newErrors = {};
     if (!formData.hospitalId.trim()) newErrors.hospitalId = 'Hospital ID is required';
     else {
-      // Check for duplicate hospitalId
       const q = query(collection(db, 'hospitals'), where('hospitalId', '==', formData.hospitalId.trim()));
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
@@ -33,7 +34,13 @@ const AddHospital = ({ navigation }) => {
       }
     }
     if (!formData.name.trim()) newErrors.name = 'Hospital name is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.state.trim()) newErrors.state = 'State is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.street.trim()) newErrors.street = 'Street address is required';
+    if (!formData.contact.trim()) newErrors.contact = 'Contact information is required';
+    else if (!/^\+?\d{10,15}$/.test(formData.contact.trim())) {
+      newErrors.contact = 'Enter a valid phone number (10-15 digits)';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -53,7 +60,10 @@ const AddHospital = ({ navigation }) => {
       await addDoc(collection(db, 'hospitals'), {
         hospitalId: formData.hospitalId.trim(),
         name: formData.name.trim(),
-        address: formData.address.trim(),
+        state: formData.state.trim(),
+        city: formData.city.trim(),
+        street: formData.street.trim(),
+        contact: formData.contact.trim(),
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -62,10 +72,13 @@ const AddHospital = ({ navigation }) => {
       setFormData({
         hospitalId: '',
         name: '',
-        address: '',
+        state: '',
+        city: '',
+        street: '',
+        contact: '',
       });
       setTimeout(() => {
-        navigation.goBack();
+        navigation.navigate('AdminDashboard');
       }, 1500);
     } catch (error) {
       console.error('Error adding hospital:', error.message);
@@ -88,24 +101,11 @@ const AddHospital = ({ navigation }) => {
         <View style={styles.headerContainer}>
           <Header>Add Hospital</Header>
         </View>
-        <ScrollView
-          contentContainerStyle={styles.scrollViewContainer}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          horizontal={false}
-          contentInset={{ left: 0, right: 0 }}
-          scrollEventThrottle={16}
-          onScroll={event => {
-            const xOffset = event.nativeEvent.contentOffset.x;
-            if (Math.abs(xOffset) > 0.5) {
-              console.log(`Horizontal scroll detected: ${xOffset}, resetting to 0`);
-              event.target.scrollTo({ x: 0, animated: false });
-            }
-          }}
-          bounces={false}
-          alwaysBounceHorizontal={false}
-          scrollEnabled={true}
-          overScrollMode="never"
+          keyboardShouldPersistTaps="handled"
         >
           {successMessage ? (
             <View style={styles.successContainer}>
@@ -114,7 +114,7 @@ const AddHospital = ({ navigation }) => {
             </View>
           ) : (
             <>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, styles.firstInputContainer]}>
                 <Text style={styles.label}>Hospital ID</Text>
                 <TextInput
                   style={[styles.input, errors.hospitalId && styles.inputError]}
@@ -143,18 +143,61 @@ const AddHospital = ({ navigation }) => {
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label}>State</Text>
                 <TextInput
-                  style={[styles.input, errors.address && styles.inputError]}
-                  value={formData.address}
-                  onChangeText={text => handleInputChange('address', text)}
-                  placeholder="Enter hospital address"
+                  style={[styles.input, errors.state && styles.inputError]}
+                  value={formData.state}
+                  onChangeText={text => handleInputChange('state', text)}
+                  placeholder="Enter state"
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   maxLength={40}
                   textBreakStrategy="simple"
                 />
-                {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
+                {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>City</Text>
+                <TextInput
+                  style={[styles.input, errors.city && styles.inputError]}
+                  value={formData.city}
+                  onChangeText={text => handleInputChange('city', text)}
+                  placeholder="Enter city"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxLength={40}
+                  textBreakStrategy="simple"
+                />
+                {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Street Address</Text>
+                <TextInput
+                  style={[styles.input, errors.street && styles.inputError]}
+                  value={formData.street}
+                  onChangeText={text => handleInputChange('street', text)}
+                  placeholder="Enter street address"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxLength={40}
+                  textBreakStrategy="simple"
+                />
+                {errors.street && <Text style={styles.errorText}>{errors.street}</Text>}
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Contact Number</Text>
+                <TextInput
+                  style={[styles.input, errors.contact && styles.inputError]}
+                  value={formData.contact}
+                  onChangeText={text => handleInputChange('contact', text)}
+                  placeholder="Enter contact number"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  maxLength={15}
+                  keyboardType="phone-pad"
+                  textBreakStrategy="simple"
+                />
+                {errors.contact && <Text style={styles.errorText}>{errors.contact}</Text>}
               </View>
               {errors.submit && (
                 <View style={styles.submitErrorContainer}>
@@ -184,124 +227,102 @@ const AddHospital = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    width: '100%',
     backgroundColor: '#fff',
-    width: SCREEN_WIDTH,
-    maxWidth: SCREEN_WIDTH,
-    overflow: 'hidden',
   },
   headerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    width: SCREEN_WIDTH,
-    maxWidth: SCREEN_WIDTH,
-    overflow: 'hidden',
-  },
-  scrollViewContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
-    width: SCREEN_WIDTH,
-    minWidth: SCREEN_WIDTH - 40,
-    maxWidth: SCREEN_WIDTH - 40,
+    marginTop: Platform.OS === 'ios' ? Math.max(24, SCREEN_HEIGHT * 0.04) : 16,
+    paddingVertical: 8,
+    width: '100%',
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    flexWrap: 'wrap',
-    flexDirection: 'column',
-    flex: 0,
   },
   inputContainer: {
-    marginVertical: 18,
-    width: Math.min(260, SCREEN_WIDTH - 40),
-    maxWidth: SCREEN_WIDTH - 40,
-    alignSelf: 'center',
+    marginVertical: 10,
+    width: '100%',
     alignItems: 'center',
+  },
+  firstInputContainer: {
+    marginTop: 8,
   },
   label: {
     fontSize: 20,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#333',
-    marginBottom: 6,
+    marginBottom: 12,
     textAlign: 'center',
     width: '100%',
   },
   input: {
     backgroundColor: '#E5E7EB',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 16,
     fontSize: 18,
     color: '#1F2937',
-    width: '100%',
-    maxWidth: '100%',
-    flexShrink: 1,
-    overflow: 'hidden',
+    width: 320,
     textAlign: 'center',
-    textOverflow: 'ellipsis',
+    minHeight: 60,
   },
   inputError: {
     borderColor: 'red',
     borderWidth: 1,
   },
   errorText: {
-    fontSize: 20,
+    fontSize: 16,
     color: 'red',
-    marginTop: 4,
+    marginTop: 8,
     textAlign: 'center',
     width: '100%',
-    maxWidth: '100%',
-    ellipsizeMode: 'tail',
-    numberOfLines: 1,
   },
   submitButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-    paddingVertical: 16,
     paddingHorizontal: 24,
-    marginVertical: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 18,
+    width: '100%',
     alignItems: 'center',
-    width: Math.min(260, SCREEN_WIDTH - 40),
-    maxWidth: SCREEN_WIDTH - 40,
-    alignSelf: 'center',
+    minHeight: 60,
   },
   submitButtonDisabled: {
-    backgroundColor: '#aaa',
+    opacity: 0.7,
   },
   submitButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
     color: '#fff',
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   successContainer: {
-    width: Math.min(260, SCREEN_WIDTH - 40),
-    maxWidth: SCREEN_WIDTH - 40,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginVertical: 20,
-    alignSelf: 'center',
+    paddingHorizontal: 24,
+    width: '100%',
   },
   successText: {
-    fontSize: 18,
+    marginTop: 16,
+    fontSize: 20,
     color: 'green',
     textAlign: 'center',
-    marginTop: 12,
-    width: Math.min(260, SCREEN_WIDTH - 40),
-    maxWidth: SCREEN_WIDTH - 40,
-    ellipsizeMode: 'tail',
-    numberOfLines: 1,
-    overflow: 'hidden',
+    fontWeight: '600',
   },
   submitErrorContainer: {
-    width: Math.min(260, SCREEN_WIDTH - 40),
-    maxWidth: SCREEN_WIDTH - 40,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginVertical: 20,
-    alignSelf: 'center',
+    marginTop: 24,
+    width: '100%',
   },
 });
 

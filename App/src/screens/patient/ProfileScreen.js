@@ -11,6 +11,7 @@ import Header from '../../components/Header';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import { theme } from '../../core/theme';
+import { navigationRef } from '../../navigation/navigationRef';
 
 const ProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState({ value: '', error: '' });
@@ -167,15 +168,15 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleChangePassword = () => {
-    navigation.navigate('ChangePassword');
+    navigation.navigate('ResetPassword');
   };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigation.reset({
+      navigationRef.current?.reset({
         index: 0,
-        routes: [{ name: 'StartScreen' }],
+        routes: [{ name: 'Start' }],
       });
     } catch (error) {
       console.error('Error signing out:', error);
@@ -186,7 +187,7 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Background>
-        <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <ScrollView contentContainerStyle={styles.scrollViewContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.profileContainer}>
             <TouchableOpacity onPress={pickImage}>
               {profileImageURL ? (

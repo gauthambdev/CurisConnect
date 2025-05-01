@@ -165,7 +165,7 @@ const PastAppointments = ({ navigation }) => {
           <FlatList
             data={appointments}
             renderItem={renderAppointment}
-            keyExtractor={item => item.id}
+            keyExtractor={item => typeof item.id === 'string' ? item.id : String(item.id)}
             contentContainerStyle={styles.listContent}
           />
         )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { StyleSheet, Alert } from "react-native"
-import Background from "../../components/Background"
+import Background from "../components/Background"
 import Header from "../../components/Header"
 import Button from "../../components/Button"
 import TextInput from "../../components/TextInput"

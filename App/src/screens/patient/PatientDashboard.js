@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Text, ImageBackground, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import Background from '../../components/Background';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import DashboardCard from '../../components/DashboardCard';
 import { theme } from '../../core/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Background from '../../components/Background';
+import * as Notifications from 'expo-notifications';
 
 const PatientDashboard = ({ navigation }) => {
   const [userName, setUserName] = useState('');
   const [nearestAppointment, setNearestAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -118,6 +120,13 @@ const PatientDashboard = ({ navigation }) => {
     fetchNearestAppointment();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      console.log('Scheduled notifications:', scheduled);
+    })();
+  }, []);
+
   // Format the date and time for display
   const formatDateTime = (date, time) => {
     if (date === 'N/A' || time === 'N/A') return 'N/A';
@@ -137,14 +146,18 @@ const PatientDashboard = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['bottom']}>
       <Background>
         {/* Header */}
-        <View style={styles.headerContainer}>
+        <View style={[styles.headerContainer, { marginTop: insets.top + 12 }]}>
           <Header>Hi {userName}👋</Header>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <ScrollView
+          contentContainerStyle={{ ...styles.scrollViewContainer, paddingBottom: 2 }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           {/* Upcoming Appointment Card */}
           <TouchableOpacity
             style={styles.upcomingCard}
@@ -235,28 +248,6 @@ const PatientDashboard = ({ navigation }) => {
             />
           </View>
         </ScrollView>
-
-        {/* Bottom Navigation Bar */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.bottomBarItem}>
-            <Icon name="home" size={24} color={theme.colors.primary} />
-            <Text style={styles.bottomBarText}>Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.bottomBarItem}
-            onPress={() => navigation.navigate('QuickDiagnosis')}
-          >
-            <Icon name="chat" size={24} color="#666" />
-            <Text style={styles.bottomBarText}>Chatbot</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.bottomBarItem}
-            onPress={() => navigation.navigate('ProfileScreen')}
-          >
-            <Icon name="account" size={24} color="#666" />
-            <Text style={styles.bottomBarText}>Profile</Text>
-          </TouchableOpacity>
-        </View>
       </Background>
     </SafeAreaView>
   );
@@ -265,7 +256,7 @@ const PatientDashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   headerContainer: {
     flexDirection: 'row',
@@ -277,7 +268,7 @@ const styles = StyleSheet.create({
   scrollViewContainer: {
     flexGrow: 1,
     paddingHorizontal: 0,
-    paddingBottom: 60, // Space for bottom bar
+    paddingTop: 0,
   },
   upcomingCard: {
     marginVertical: 10,
@@ -332,27 +323,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginTop: 10,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  bottomBarItem: {
-    alignItems: 'center',
-  },
-  bottomBarText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
   },
   errorText: {
     fontSize: 16,

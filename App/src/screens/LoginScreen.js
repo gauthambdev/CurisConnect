@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Alert } from "react-native";
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { theme } from '../core/theme';
@@ -9,7 +9,7 @@ import Button from '../components/Button';
 import TextInput from '../components/TextInput';
 import { Text } from 'react-native-paper';
 import { db, auth } from "../firebaseConfig";
-import { doc, getDoc } from "firebase/firestore"; // Firestore imports
+import { doc, getDoc, setDoc } from "firebase/firestore"; // Firestore imports
 import { signInWithEmailAndPassword } from "firebase/auth"; // Firebase Auth
 import { useNavigation } from "@react-navigation/native";
 import { emailValidator } from "../helpers/emailValidator";
@@ -20,55 +20,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState({ value: "", error: "" });
   const [password, setPassword] = useState({ value: "", error: "" });
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        // Fetch role from Firestore across all collections
-        const fetchUserRole = async () => {
-          const collections = ["patients", "medicalstaff", "admins"];
-          let userRole = null;
-
-          for (const collectionName of collections) {
-            const userDoc = await getDoc(doc(db, collectionName, user.uid));
-            if (userDoc.exists()) {
-              userRole = userDoc.data().role;
-              break; // Stop searching once we find the user
-            }
-          }
-
-          if (userRole) {
-            navigateToDashboard(userRole);
-          } else {
-            Alert.alert("Error", "User role not found.");
-          }
-        };
-
-        fetchUserRole();
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const navigateToDashboard = (role) => {
-    switch (role) {
-      case "doctor":
-        navigation.replace("DoctorDashboard");
-        break;
-      case "patient":
-        navigation.replace("PatientDashboard");
-        break;
-      case "nurse":
-        navigation.replace("NurseDashboard");
-        break;
-      case "admin":
-        navigation.replace("AdminDashboard");
-        break;
-      default:
-        Alert.alert("Error", "Invalid user role.");
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const onLoginPressed = async () => {
     const emailError = emailValidator(email.value);
@@ -80,29 +32,54 @@ export default function LoginScreen() {
       return;
     }
   
+    setLoading(true);
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
       const user = userCredential.user;
   
-      // Check all collections for the user
+      // Fetch user role from Firestore
       const collections = ["patients", "medicalstaff", "admins"];
       let userRole = null;
+      let collectionName = null;
   
-      for (const collectionName of collections) {
-        const userDoc = await getDoc(doc(db, collectionName, user.uid));
+      for (const collection of collections) {
+        const userDoc = await getDoc(doc(db, collection, user.uid));
         if (userDoc.exists()) {
           userRole = userDoc.data().role;
-          break; // Stop searching once we find the user
+          collectionName = collection;
+          break;
         }
       }
   
-      if (userRole) {
-        navigateToDashboard(userRole);
-      } else {
-        Alert.alert("Error", "User role not found.");
+      if (!userRole) {
+        // Handle case where user exists in Auth but not in Firestore
+        Alert.alert("Error", "User role not found. Please contact support.");
+        await auth.signOut();
+        setLoading(false);
+        return;
       }
+      
+      // Update last login timestamp
+      await setDoc(doc(db, collectionName, user.uid), { 
+        lastLogin: new Date().toISOString() 
+      }, { merge: true });
+      
+      // We'll let the AppNavigator handle the navigation based on auth state
+      // But we'll navigate directly to Splash screen to trigger re-checking
+      navigation.navigate('Splash');
+      
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      console.error("Login error:", error);
+      let errorMessage = "Please check your credentials and try again.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Invalid email or password.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed login attempts. Please try again later.";
+      }
+      Alert.alert("Login Failed", errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,6 +98,7 @@ export default function LoginScreen() {
         autoCompleteType="email"
         textContentType="emailAddress"
         keyboardType="email-address"
+        disabled={loading}
       />
       <TextInput
         label="Password"
@@ -130,20 +108,30 @@ export default function LoginScreen() {
         error={!!password.error}
         errorText={password.error}
         secureTextEntry
+        disabled={loading}
       />
       <View style={styles.forgotPassword}>
         <TouchableOpacity
           onPress={() => navigation.navigate('ResetPasswordScreen')}
+          disabled={loading}
         >
           <Text style={styles.forgot}>Forgot your password?</Text>
         </TouchableOpacity>
       </View>
-      <Button mode="contained" onPress={onLoginPressed}>
-        Login
+      <Button 
+        mode="contained" 
+        onPress={onLoginPressed} 
+        loading={loading}
+        disabled={loading}
+      >
+        {loading ? 'Logging in...' : 'Login'}
       </Button>
       <View style={styles.row}>
-        <Text>Don’t have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.replace('RegisterScreen')}>
+        <Text>Don't have an account? </Text>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('RegisterScreen')}
+          disabled={loading}
+        >
           <Text style={styles.link}>Sign up</Text>
         </TouchableOpacity>
       </View>

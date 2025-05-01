@@ -42,12 +42,14 @@ export default function RegisterScreen({ navigation }) {
     const lastNameError = nameValidator(lastName.value);
     const emailError = emailValidator(email.value);
     const passwordError = passwordValidator(password.value);
+    const sexError = !sex.value ? "Please select your gender." : "";
     
-    if (firstNameError || lastNameError || emailError || passwordError) {
+    if (firstNameError || lastNameError || emailError || passwordError || sexError) {
       setFirstName({ ...firstName, error: firstNameError });
       setLastName({ ...lastName, error: lastNameError });
       setEmail({ ...email, error: emailError });
       setPassword({ ...password, error: passwordError });
+      setSex({ ...sex, error: sexError });
       return;
     }
 
@@ -236,7 +238,7 @@ export default function RegisterScreen({ navigation }) {
             
             <TouchableOpacity 
               style={styles.loginLink} 
-              onPress={() => navigation.replace('LoginScreen')}
+              onPress={() => navigation.replace('Start')}
             >
               <Text style={styles.loginText}>Already have an account? Login here</Text>
             </TouchableOpacity>

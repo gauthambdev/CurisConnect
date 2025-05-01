@@ -106,14 +106,14 @@ const DoctorDashboard = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Background>
+    <SafeAreaView style={{ flex: 1, width: '100%', backgroundColor: '#fff' }}>
+      <Background style={{ flex: 1, width: '100%' }}>
         {/* Header */}
-        <View style={styles.headerContainer}>
+        <View style={[styles.headerContainer, { width: '100%' }]}>
           <Header>Hi Dr. {userName} 👋</Header>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <ScrollView contentContainerStyle={{ ...styles.scrollViewContainer, width: '100%', paddingBottom: 60 }}>
           {/* Appointments Graph */}
           <TouchableOpacity style={styles.graphCard}>
             <View style={styles.graphCardContent}>
@@ -147,7 +147,7 @@ const DoctorDashboard = ({ navigation }) => {
               icon="account-group"
               title="View Patients"
               subtitle="Check patient list"
-              onPress={() => navigation.navigate('ViewPatients')}
+              onPress={() => navigation.navigate('ViewDocPatients')}
             />
             <DashboardCard
               icon="file-document"
@@ -169,21 +169,6 @@ const DoctorDashboard = ({ navigation }) => {
             />
           </View>
         </ScrollView>
-
-        {/* Bottom Navigation Bar */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.bottomBarItem}>
-            <Icon name="home" size={24} color={theme.colors.primary} />
-            <Text style={styles.bottomBarText}>Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.bottomBarItem}
-            onPress={() => navigation.navigate('DocProfileScreen')}
-          >
-            <Icon name="account" size={24} color="#666" />
-            <Text style={styles.bottomBarText}>Profile</Text>
-          </TouchableOpacity>
-        </View>
       </Background>
     </SafeAreaView>
   );
@@ -260,27 +245,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     margin: 10,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  bottomBarItem: {
-    alignItems: 'center',
-  },
-  bottomBarText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
   },
 });
 
